@@ -18,7 +18,8 @@ class Database {
 
     /**
      * Reads an environment variable with a local default.
-     * On hosting (e.g. Render) set DB_HOST, DB_NAME, DB_USER, DB_PASS.
+     * On hosting (e.g. Render + Aiven) set DB_HOST, DB_PORT, DB_NAME,
+     * DB_USER, DB_PASS and DB_SSL_CA (path to the provider CA certificate).
      * Locally (XAMPP) nothing must be set: it falls back to root/''.
      */
     private static function env($key, $default) {
@@ -33,15 +34,21 @@ class Database {
     public static function getConnection() {
         if (self::$instance === null) {
             $host = self::env('DB_HOST', self::$host);
+            $port = self::env('DB_PORT', '3306');
             $dbName = self::env('DB_NAME', self::$db_name);
             $user = self::env('DB_USER', self::$username);
             $pass = self::env('DB_PASS', self::$password);
-            $dsn = "mysql:host=" . $host . ";dbname=" . $dbName . ";charset=" . self::$charset;
+            $sslCa = self::env('DB_SSL_CA', '');
+            $dsn = "mysql:host=" . $host . ";port=" . $port . ";dbname=" . $dbName . ";charset=" . self::$charset;
             $options = [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ];
+            // Managed MySQL (e.g. Aiven) mandates TLS: verify with the provider CA.
+            if ($sslCa !== '' && is_readable($sslCa)) {
+                $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCa;
+            }
 
             try {
                 self::$instance = new PDO($dsn, $user, $pass, $options);
