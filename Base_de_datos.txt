@@ -1,0 +1,643 @@
+-- ============================================================
+-- BASE DE DATOS
+-- SISTEMA WEB DE CONTROL Y SEGUIMIENTO DE PASANTES
+-- Y MODALIDADES DE TITULACIÓN
+-- CENTRO CULTURAL DON BOSCO
+-- MySQL 8.0+
+-- ============================================================
+
+DROP DATABASE IF EXISTS sistema_pasantes_ccdb;
+
+CREATE DATABASE sistema_pasantes_ccdb
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+USE sistema_pasantes_ccdb;
+
+
+-- ============================================================
+-- 1. TABLA: ROLES
+-- ============================================================
+
+CREATE TABLE roles (
+    id_rol INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    descripcion VARCHAR(255),
+    estado TINYINT(1) NOT NULL DEFAULT 1,
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 2. TABLA: USUARIOS
+-- ============================================================
+
+CREATE TABLE usuarios (
+    id_usuario INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    id_rol INT UNSIGNED NOT NULL,
+
+    usuario VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+
+    nombres VARCHAR(100) NOT NULL,
+    apellidos VARCHAR(100) NOT NULL,
+    ci VARCHAR(30) NOT NULL UNIQUE,
+    correo VARCHAR(150) UNIQUE,
+    telefono VARCHAR(30),
+
+    estado TINYINT(1) NOT NULL DEFAULT 1,
+    remember_token VARCHAR(255) NULL,
+    remember_expiry DATETIME NULL,
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_usuarios_roles
+        FOREIGN KEY (id_rol)
+        REFERENCES roles(id_rol)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 3. TABLA: TIPOS DE INSTITUCIÓN
+-- ============================================================
+
+CREATE TABLE tipos_institucion (
+    id_tipo_institucion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(80) NOT NULL UNIQUE,
+    descripcion VARCHAR(255),
+    estado TINYINT(1) NOT NULL DEFAULT 1
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 4. TABLA: INSTITUCIONES
+-- ============================================================
+
+CREATE TABLE instituciones (
+    id_institucion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    id_tipo_institucion INT UNSIGNED NOT NULL,
+
+    nombre VARCHAR(150) NOT NULL,
+    nit VARCHAR(30),
+    direccion VARCHAR(255),
+    telefono VARCHAR(30),
+    correo VARCHAR(150),
+
+    estado TINYINT(1) NOT NULL DEFAULT 1,
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_institucion_nombre
+        UNIQUE (nombre),
+
+    CONSTRAINT fk_instituciones_tipo
+        FOREIGN KEY (id_tipo_institucion)
+        REFERENCES tipos_institucion(id_tipo_institucion)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 5. TABLA: CARRERAS
+-- ============================================================
+
+CREATE TABLE carreras (
+    id_carrera INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    id_universidad INT UNSIGNED NOT NULL,
+
+    nombre VARCHAR(150) NOT NULL,
+
+    estado TINYINT(1) NOT NULL DEFAULT 1,
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_carrera_universidad
+        UNIQUE (id_universidad, nombre),
+
+    CONSTRAINT fk_carreras_universidad
+        FOREIGN KEY (id_universidad)
+        REFERENCES instituciones(id_institucion)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 6. TABLA: PASANTES
+-- ============================================================
+
+CREATE TABLE pasantes (
+    id_pasante INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    id_usuario INT UNSIGNED NULL,
+    id_universidad INT UNSIGNED NOT NULL,
+    id_carrera INT UNSIGNED NOT NULL,
+
+    ci VARCHAR(30) NOT NULL UNIQUE,
+    nombres VARCHAR(100) NOT NULL,
+    apellidos VARCHAR(100) NOT NULL,
+
+    correo VARCHAR(150),
+    telefono VARCHAR(30),
+    semestre VARCHAR(50),
+
+    estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
+
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_pasantes_usuario
+        FOREIGN KEY (id_usuario)
+        REFERENCES usuarios(id_usuario)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    CONSTRAINT fk_pasantes_universidad
+        FOREIGN KEY (id_universidad)
+        REFERENCES instituciones(id_institucion)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_pasantes_carrera
+        FOREIGN KEY (id_carrera)
+        REFERENCES carreras(id_carrera)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 7. TABLA: MODALIDADES
+-- ============================================================
+
+CREATE TABLE modalidades (
+    id_modalidad INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    descripcion TEXT,
+
+    horas_requeridas_base INT UNSIGNED NOT NULL,
+
+    estado TINYINT(1) NOT NULL DEFAULT 1,
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_modalidad_horas
+        CHECK (horas_requeridas_base > 0)
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 8. TABLA: PROCESOS
+-- ============================================================
+-- Representa la relación:
+-- PASANTE + INSTITUCIÓN + MODALIDAD
+--
+-- Aquí se conserva la cantidad de horas requerida
+-- específicamente para ese proceso.
+-- ============================================================
+
+CREATE TABLE procesos (
+    id_proceso INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    id_pasante INT UNSIGNED NOT NULL,
+    id_institucion INT UNSIGNED NOT NULL,
+    id_modalidad INT UNSIGNED NOT NULL,
+
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NULL,
+
+    horas_requeridas INT UNSIGNED NOT NULL,
+    estado VARCHAR(30) NOT NULL DEFAULT 'EN_CURSO',
+
+    observacion TEXT,
+
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_procesos_pasante
+        FOREIGN KEY (id_pasante)
+        REFERENCES pasantes(id_pasante)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_procesos_institucion
+        FOREIGN KEY (id_institucion)
+        REFERENCES instituciones(id_institucion)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_procesos_modalidad
+        FOREIGN KEY (id_modalidad)
+        REFERENCES modalidades(id_modalidad)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT chk_proceso_horas
+        CHECK (horas_requeridas > 0),
+
+    CONSTRAINT chk_proceso_fechas
+        CHECK (
+            fecha_fin IS NULL
+            OR fecha_fin >= fecha_inicio
+        )
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 9. TABLA: CÓDIGOS QR
+-- ============================================================
+
+CREATE TABLE codigos_qr (
+    id_qr INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    codigo VARCHAR(255) NOT NULL UNIQUE,
+
+    fecha DATE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_expiracion TIME NOT NULL,
+
+    estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
+
+    fecha_generacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_qr_horas
+        CHECK (hora_expiracion > hora_inicio)
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 10. TABLA: ASISTENCIAS
+-- ============================================================
+
+CREATE TABLE asistencias (
+    id_asistencia INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    id_proceso INT UNSIGNED NOT NULL,
+    id_qr INT UNSIGNED NULL,
+
+    fecha DATE NOT NULL,
+
+    hora_entrada TIME NULL,
+    hora_salida TIME NULL,
+
+    estado VARCHAR(30) NOT NULL DEFAULT 'PRESENTE',
+
+    observacion TEXT,
+
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_asistencias_proceso
+        FOREIGN KEY (id_proceso)
+        REFERENCES procesos(id_proceso)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_asistencias_qr
+        FOREIGN KEY (id_qr)
+        REFERENCES codigos_qr(id_qr)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
+    CONSTRAINT uq_asistencia_proceso_fecha
+        UNIQUE (id_proceso, fecha),
+
+    CONSTRAINT chk_asistencia_horas
+        CHECK (
+            hora_salida IS NULL
+            OR hora_entrada IS NULL
+            OR hora_salida > hora_entrada
+        )
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 11. TABLA: TIPOS DE SANCIÓN
+-- ============================================================
+
+CREATE TABLE tipos_sancion (
+    id_tipo_sancion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    descripcion VARCHAR(255),
+
+    estado TINYINT(1) NOT NULL DEFAULT 1,
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 12. TABLA: SANCIONES
+-- ============================================================
+
+CREATE TABLE sanciones (
+    id_sancion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    id_proceso INT UNSIGNED NOT NULL,
+    id_tipo_sancion INT UNSIGNED NOT NULL,
+    registrado_por INT UNSIGNED NOT NULL,
+
+    fecha DATE NOT NULL,
+
+    motivo VARCHAR(255),
+    descripcion TEXT,
+
+    horas_descontadas DECIMAL(5,2) NOT NULL DEFAULT 0,
+
+    estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVA',
+
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_sanciones_proceso
+        FOREIGN KEY (id_proceso)
+        REFERENCES procesos(id_proceso)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_sanciones_tipo
+        FOREIGN KEY (id_tipo_sancion)
+        REFERENCES tipos_sancion(id_tipo_sancion)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_sanciones_usuario
+        FOREIGN KEY (registrado_por)
+        REFERENCES usuarios(id_usuario)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT chk_sancion_horas
+        CHECK (horas_descontadas >= 0)
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 13. TABLA: CERTIFICACIONES
+-- ============================================================
+
+CREATE TABLE certificaciones (
+    id_certificacion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    id_proceso INT UNSIGNED NOT NULL,
+    emitido_por INT UNSIGNED NOT NULL,
+
+    fecha_emision DATE NOT NULL,
+
+    horas_cumplidas DECIMAL(8,2) NOT NULL,
+
+    tipo_certificado VARCHAR(100) NOT NULL,
+    numero_certificado VARCHAR(100) NOT NULL UNIQUE,
+
+    observacion TEXT,
+
+    estado VARCHAR(30) NOT NULL DEFAULT 'EMITIDO',
+
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_certificaciones_proceso
+        FOREIGN KEY (id_proceso)
+        REFERENCES procesos(id_proceso)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_certificaciones_usuario
+        FOREIGN KEY (emitido_por)
+        REFERENCES usuarios(id_usuario)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT chk_certificacion_horas
+        CHECK (horas_cumplidas >= 0)
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 14. TABLA: NOTIFICACIONES
+-- ============================================================
+
+CREATE TABLE notificaciones (
+    id_notificacion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    id_pasante INT UNSIGNED NOT NULL,
+
+    titulo VARCHAR(150) NOT NULL,
+    mensaje TEXT NOT NULL,
+
+    tipo VARCHAR(50) NOT NULL,
+
+    leida TINYINT(1) NOT NULL DEFAULT 0,
+
+    fecha_envio DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_notificaciones_pasante
+        FOREIGN KEY (id_pasante)
+        REFERENCES pasantes(id_pasante)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 15. TABLA: AUDITORÍA
+-- ============================================================
+
+CREATE TABLE auditoria (
+    id_auditoria BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    id_usuario INT UNSIGNED NULL,
+
+    accion VARCHAR(50) NOT NULL,
+    tabla_afectada VARCHAR(100) NOT NULL,
+    id_registro BIGINT UNSIGNED NULL,
+
+    descripcion TEXT,
+
+    ip VARCHAR(45),
+
+    fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_auditoria_usuario
+        FOREIGN KEY (id_usuario)
+        REFERENCES usuarios(id_usuario)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- ÍNDICES
+-- ============================================================
+
+CREATE INDEX idx_pasantes_universidad
+    ON pasantes(id_universidad);
+
+CREATE INDEX idx_pasantes_carrera
+    ON pasantes(id_carrera);
+
+CREATE INDEX idx_procesos_pasante
+    ON procesos(id_pasante);
+
+CREATE INDEX idx_procesos_institucion
+    ON procesos(id_institucion);
+
+CREATE INDEX idx_procesos_modalidad
+    ON procesos(id_modalidad);
+
+CREATE INDEX idx_procesos_estado
+    ON procesos(estado);
+
+CREATE INDEX idx_asistencias_fecha
+    ON asistencias(fecha);
+
+CREATE INDEX idx_asistencias_proceso_fecha
+    ON asistencias(id_proceso, fecha);
+
+CREATE INDEX idx_sanciones_fecha
+    ON sanciones(fecha);
+
+CREATE INDEX idx_certificaciones_fecha
+    ON certificaciones(fecha_emision);
+
+CREATE INDEX idx_notificaciones_pasante
+    ON notificaciones(id_pasante);
+
+CREATE INDEX idx_notificaciones_leida
+    ON notificaciones(leida);
+
+CREATE INDEX idx_auditoria_fecha
+    ON auditoria(fecha);
+
+
+-- ============================================================
+-- DATOS INICIALES
+-- ============================================================
+
+-- ROLES
+
+INSERT INTO roles
+(nombre, descripcion)
+VALUES
+('ADMINISTRADOR', 'Administrador general del sistema'),
+('PERSONAL', 'Personal administrativo autorizado'),
+('PASANTE', 'Usuario correspondiente a un pasante');
+
+
+-- TIPOS DE INSTITUCIÓN
+
+INSERT INTO tipos_institucion
+(nombre, descripcion)
+VALUES
+('UNIVERSIDAD', 'Universidad o institución de educación superior'),
+('INSTITUCION_CONVENIO', 'Institución que mantiene convenio para pasantías o trabajo dirigido'),
+('CENTRO_CULTURAL', 'Centro cultural'),
+('OTRA', 'Otro tipo de institución');
+
+
+-- MODALIDADES
+
+INSERT INTO modalidades
+(nombre, descripcion, horas_requeridas_base)
+VALUES
+(
+    'Pasantía',
+    'Modalidad de pasantía realizada por el estudiante',
+    1000
+),
+(
+    'Trabajo Dirigido',
+    'Modalidad de titulación mediante trabajo dirigido',
+    1000
+);
+
+
+-- TIPOS DE SANCIÓN
+
+INSERT INTO tipos_sancion
+(nombre, descripcion)
+VALUES
+(
+    'ATRASO',
+    'Incumplimiento del horario establecido'
+),
+(
+    'FALTA',
+    'Inasistencia del pasante'
+),
+(
+    'SALIDA_ANTICIPADA',
+    'Salida antes del horario establecido'
+),
+(
+    'OTRA',
+    'Otro tipo de incumplimiento'
+);
+
+
+-- ============================================================
+-- VISTA: RESUMEN DE HORAS POR PROCESO
+-- ============================================================
+-- Esta vista calcula las horas directamente a partir de
+-- hora_entrada y hora_salida.
+--
+-- No guardamos horas_trabajadas en ASISTENCIAS porque es
+-- un dato calculable.
+-- ============================================================
+
+CREATE OR REPLACE VIEW vista_horas_proceso AS
+
+SELECT
+    p.id_proceso,
+    p.id_pasante,
+    p.id_modalidad,
+    p.horas_requeridas,
+
+    COALESCE(
+        SUM(
+            CASE
+                WHEN a.hora_entrada IS NOT NULL
+                 AND a.hora_salida IS NOT NULL
+                THEN TIME_TO_SEC(
+                    TIMEDIFF(
+                        a.hora_salida,
+                        a.hora_entrada
+                    )
+                ) / 3600
+                ELSE 0
+            END
+        ),
+        0
+    ) AS horas_acumuladas,
+
+    GREATEST(
+        p.horas_requeridas -
+        COALESCE(
+            SUM(
+                CASE
+                    WHEN a.hora_entrada IS NOT NULL
+                     AND a.hora_salida IS NOT NULL
+                    THEN TIME_TO_SEC(
+                        TIMEDIFF(
+                            a.hora_salida,
+                            a.hora_entrada
+                        )
+                    ) / 3600
+                    ELSE 0
+                END
+            ),
+            0
+        ),
+        0
+    ) AS horas_faltantes
+
+FROM procesos p
+
+LEFT JOIN asistencias a
+    ON p.id_proceso = a.id_proceso
+
+GROUP BY
+    p.id_proceso,
+    p.id_pasante,
+    p.id_modalidad,
+    p.horas_requeridas;
+
+
+-- ============================================================
+-- FIN DEL SCRIPT
+-- ============================================================
