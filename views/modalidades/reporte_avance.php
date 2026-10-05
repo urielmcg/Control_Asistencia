@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Reporte de Avance y Cumplimiento para Certificación
  * Vista apta para pantalla e impresión formal.

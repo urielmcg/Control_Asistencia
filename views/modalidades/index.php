@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Lista de Modalidades del Sistema
  */

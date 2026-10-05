@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Helper de Autenticación, Auditoría y Control de Acceso - Sistema Web CCDB
  */

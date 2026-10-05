@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Cierre de sesión seguro
  */

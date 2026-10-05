@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- BASE DE DATOS: SISTEMA WEB CCDB
 -- SISTEMA WEB DE CONTROL Y SEGUIMIENTO DE PASANTES
 -- Y MODALIDADES DE TITULACIÓN

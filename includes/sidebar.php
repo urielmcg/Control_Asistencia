@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Sidebar de navegación del Sistema Web CCDB
  */

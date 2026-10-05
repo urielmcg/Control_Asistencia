@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Configuración de Conexión a Base de Datos - Sistema Web CCDB
  * Utiliza PDO con manejo de excepciones y codificación UTF-8.

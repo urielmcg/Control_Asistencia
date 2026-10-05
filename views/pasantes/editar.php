@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Edición de Pasante
  */

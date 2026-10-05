@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Header común para todas las vistas autenticadas
  */

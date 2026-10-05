@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * API: Obtener Carreras de una Universidad en formato JSON
  */

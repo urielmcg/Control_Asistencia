@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Consulta del Progreso de Horas por Proceso (1,000 Horas)
  * Conectado directamente a la vista 'vista_horas_proceso'.

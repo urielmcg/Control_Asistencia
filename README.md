@@ -1,4 +1,4 @@
-﻿# Sistema Web CCDB - Centro Cultural Don Bosco
+# Sistema Web CCDB - Centro Cultural Don Bosco
 
 Sistema Web de Control y Seguimiento de Pasantes y Modalidades de Titulación.
 

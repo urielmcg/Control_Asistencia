@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Asignar Modalidad a Pasante creando un nuevo Proceso
  */

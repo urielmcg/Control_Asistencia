@@ -1,4 +1,4 @@
-﻿    <footer class="main-footer">
+    <footer class="main-footer">
         <div>
             <strong>Centro Cultural Don Bosco (CCDB)</strong> &copy; <?= date('Y') ?>. Todos los derechos reservados.
         </div>

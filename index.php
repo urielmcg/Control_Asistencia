@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Dashboard Principal - Sistema Web CCDB
  * Vista con tarjetas de acción rápida estilo imagen_UI_UX.jpeg y métricas en tiempo real.

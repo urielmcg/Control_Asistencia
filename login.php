@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Pantalla de Inicio de Sesión - Sistema Web CCDB
  * Inspirada en la estética institucional y requerimientos visuales.

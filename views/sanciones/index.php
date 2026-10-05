@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Gestión de Sanciones y Atrasos
  */
