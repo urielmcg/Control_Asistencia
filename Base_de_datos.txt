@@ -141,6 +141,9 @@ CREATE TABLE pasantes (
     telefono VARCHAR(30),
     semestre VARCHAR(50),
 
+    fecha_nacimiento DATE NULL,
+    direccion TEXT NULL,
+
     estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
 
     fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -186,7 +189,50 @@ CREATE TABLE modalidades (
 
 
 -- ============================================================
--- 8. TABLA: PROCESOS
+-- 8. TABLA: TUTORES
+-- ============================================================
+
+CREATE TABLE tutores (
+    id_tutor INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    nombre VARCHAR(150) NOT NULL,
+    cargo VARCHAR(100) NOT NULL,
+    correo VARCHAR(150) NOT NULL,
+    telefono VARCHAR(30) NOT NULL,
+
+    estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
+
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 9. TABLA: DOCUMENTOS DEL PASANTE
+-- ============================================================
+
+CREATE TABLE documentos (
+    id_documento INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    id_pasante INT UNSIGNED NOT NULL,
+
+    tipo VARCHAR(50) NOT NULL,
+    ruta VARCHAR(255) NOT NULL,
+    nombre_original VARCHAR(255) NOT NULL,
+    mime VARCHAR(100) NOT NULL,
+    tamano INT UNSIGNED NOT NULL,
+
+    fecha_subida DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_documentos_pasante
+        FOREIGN KEY (id_pasante)
+        REFERENCES pasantes(id_pasante)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+
+-- ============================================================
+-- 10. TABLA: PROCESOS
 -- ============================================================
 -- Representa la relación:
 -- PASANTE + INSTITUCIÓN + MODALIDAD
@@ -201,6 +247,7 @@ CREATE TABLE procesos (
     id_pasante INT UNSIGNED NOT NULL,
     id_institucion INT UNSIGNED NOT NULL,
     id_modalidad INT UNSIGNED NOT NULL,
+    id_tutor INT UNSIGNED NULL,
 
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE NULL,
@@ -230,6 +277,12 @@ CREATE TABLE procesos (
         ON UPDATE CASCADE
         ON DELETE RESTRICT,
 
+    CONSTRAINT fk_procesos_tutor
+        FOREIGN KEY (id_tutor)
+        REFERENCES tutores(id_tutor)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL,
+
     CONSTRAINT chk_proceso_horas
         CHECK (horas_requeridas > 0),
 
@@ -242,7 +295,7 @@ CREATE TABLE procesos (
 
 
 -- ============================================================
--- 9. TABLA: CÓDIGOS QR
+-- 11. TABLA: CÓDIGOS QR
 -- ============================================================
 
 CREATE TABLE codigos_qr (
@@ -264,7 +317,7 @@ CREATE TABLE codigos_qr (
 
 
 -- ============================================================
--- 10. TABLA: ASISTENCIAS
+-- 12. TABLA: ASISTENCIAS
 -- ============================================================
 
 CREATE TABLE asistencias (
@@ -309,7 +362,7 @@ CREATE TABLE asistencias (
 
 
 -- ============================================================
--- 11. TABLA: TIPOS DE SANCIÓN
+-- 13. TABLA: TIPOS DE SANCIÓN
 -- ============================================================
 
 CREATE TABLE tipos_sancion (
@@ -324,7 +377,7 @@ CREATE TABLE tipos_sancion (
 
 
 -- ============================================================
--- 12. TABLA: SANCIONES
+-- 14. TABLA: SANCIONES
 -- ============================================================
 
 CREATE TABLE sanciones (
@@ -369,7 +422,7 @@ CREATE TABLE sanciones (
 
 
 -- ============================================================
--- 13. TABLA: CERTIFICACIONES
+-- 15. TABLA: CERTIFICACIONES
 -- ============================================================
 
 CREATE TABLE certificaciones (
@@ -409,7 +462,7 @@ CREATE TABLE certificaciones (
 
 
 -- ============================================================
--- 14. TABLA: NOTIFICACIONES
+-- 16. TABLA: NOTIFICACIONES
 -- ============================================================
 
 CREATE TABLE notificaciones (
@@ -435,7 +488,7 @@ CREATE TABLE notificaciones (
 
 
 -- ============================================================
--- 15. TABLA: AUDITORÍA
+-- 17. TABLA: AUDITORÍA
 -- ============================================================
 
 CREATE TABLE auditoria (
@@ -536,8 +589,8 @@ INSERT INTO modalidades
 (nombre, descripcion, horas_requeridas_base)
 VALUES
 (
-    'Pasantía',
-    'Modalidad de pasantía realizada por el estudiante',
+    'Proyecto de Grado',
+    'Modalidad de titulación mediante proyecto de grado institucional',
     1000
 ),
 (

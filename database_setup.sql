@@ -97,6 +97,8 @@ CREATE TABLE IF NOT EXISTS pasantes (
     correo VARCHAR(150),
     telefono VARCHAR(30),
     semestre VARCHAR(50),
+    fecha_nacimiento DATE NULL,
+    direccion TEXT NULL,
     estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
     fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_pasantes_usuario
@@ -126,12 +128,41 @@ CREATE TABLE IF NOT EXISTS modalidades (
     fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 8. TABLA: PROCESOS (Asignación pasante - modalidad - horas)
+-- 8. TABLA: TUTORES
+CREATE TABLE IF NOT EXISTS tutores (
+    id_tutor INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    cargo VARCHAR(100) NOT NULL,
+    correo VARCHAR(150) NOT NULL,
+    telefono VARCHAR(30) NOT NULL,
+    estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- 9. TABLA: DOCUMENTOS DEL PASANTE
+CREATE TABLE IF NOT EXISTS documentos (
+    id_documento INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    id_pasante INT UNSIGNED NOT NULL,
+    tipo VARCHAR(50) NOT NULL,
+    ruta VARCHAR(255) NOT NULL,
+    nombre_original VARCHAR(255) NOT NULL,
+    mime VARCHAR(100) NOT NULL,
+    tamano INT UNSIGNED NOT NULL,
+    fecha_subida DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_documentos_pasante
+        FOREIGN KEY (id_pasante)
+        REFERENCES pasantes(id_pasante)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- 10. TABLA: PROCESOS (Asignación pasante - modalidad - horas)
 CREATE TABLE IF NOT EXISTS procesos (
     id_proceso INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     id_pasante INT UNSIGNED NOT NULL,
     id_institucion INT UNSIGNED NOT NULL,
     id_modalidad INT UNSIGNED NOT NULL,
+    id_tutor INT UNSIGNED NULL,
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE NULL,
     horas_requeridas INT UNSIGNED NOT NULL,
@@ -152,10 +183,15 @@ CREATE TABLE IF NOT EXISTS procesos (
         FOREIGN KEY (id_modalidad)
         REFERENCES modalidades(id_modalidad)
         ON UPDATE CASCADE
-        ON DELETE RESTRICT
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_procesos_tutor
+        FOREIGN KEY (id_tutor)
+        REFERENCES tutores(id_tutor)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- 9. TABLA: CÓDIGOS QR
+-- 11. TABLA: CÓDIGOS QR
 CREATE TABLE IF NOT EXISTS codigos_qr (
     id_qr INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     codigo VARCHAR(255) NOT NULL UNIQUE,
@@ -166,7 +202,7 @@ CREATE TABLE IF NOT EXISTS codigos_qr (
     fecha_generacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 10. TABLA: ASISTENCIAS
+-- 12. TABLA: ASISTENCIAS
 CREATE TABLE IF NOT EXISTS asistencias (
     id_asistencia INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     id_proceso INT UNSIGNED NOT NULL,
@@ -198,7 +234,7 @@ CREATE TABLE IF NOT EXISTS asistencias (
         UNIQUE (id_proceso, fecha)
 ) ENGINE=InnoDB;
 
--- 11. TABLA: TIPOS DE SANCIÓN
+-- 13. TABLA: TIPOS DE SANCIÓN
 CREATE TABLE IF NOT EXISTS tipos_sancion (
     id_tipo_sancion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL UNIQUE,
@@ -207,7 +243,7 @@ CREATE TABLE IF NOT EXISTS tipos_sancion (
     fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- 12. TABLA: SANCIONES
+-- 14. TABLA: SANCIONES
 CREATE TABLE IF NOT EXISTS sanciones (
     id_sancion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     id_proceso INT UNSIGNED NOT NULL,
@@ -236,7 +272,7 @@ CREATE TABLE IF NOT EXISTS sanciones (
         ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 13. TABLA: CERTIFICACIONES
+-- 15. TABLA: CERTIFICACIONES
 CREATE TABLE IF NOT EXISTS certificaciones (
     id_certificacion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     id_proceso INT UNSIGNED NOT NULL,
@@ -260,7 +296,7 @@ CREATE TABLE IF NOT EXISTS certificaciones (
         ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 14. TABLA: NOTIFICACIONES
+-- 16. TABLA: NOTIFICACIONES
 CREATE TABLE IF NOT EXISTS notificaciones (
     id_notificacion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     id_pasante INT UNSIGNED NOT NULL,
@@ -276,7 +312,7 @@ CREATE TABLE IF NOT EXISTS notificaciones (
         ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- 15. TABLA: AUDITORÍA
+-- 17. TABLA: AUDITORÍA
 CREATE TABLE IF NOT EXISTS auditoria (
     id_auditoria BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT UNSIGNED NULL,
@@ -445,9 +481,9 @@ INSERT IGNORE INTO carreras (id_carrera, id_universidad, nombre) VALUES
 (5, 2, 'Ingeniería de Sistemas'),
 (6, 3, 'Ingeniería de Sistemas');
 
--- Modalidades de Titulación / Pasantías
+-- Modalidades de Titulación: Proyecto de Grado y Trabajo Dirigido
 INSERT IGNORE INTO modalidades (id_modalidad, nombre, descripcion, horas_requeridas_base) VALUES
-(1, 'Pasantía', 'Pasantía técnica o práctica profesional supervisada', 1000),
+(1, 'Proyecto de Grado', 'Modalidad de titulación mediante proyecto de grado institucional', 1000),
 (2, 'Trabajo Dirigido', 'Modalidad de titulación mediante trabajo institucional dirigido', 1000);
 
 -- Tipos de sanción
@@ -460,9 +496,9 @@ INSERT IGNORE INTO tipos_sancion (id_tipo_sancion, nombre, descripcion) VALUES
 INSERT IGNORE INTO pasantes (id_pasante, id_usuario, id_universidad, id_carrera, ci, nombres, apellidos, correo, telefono, semestre, estado) VALUES
 (1, NULL, 1, 1, '8329410', 'Carlos Andrés', 'Mamani Quispe', 'carlos.mamani@incoslapaz.edu.bo', '78945612', 'Sexto Semestre', 'ACTIVO');
 
--- Proceso asignado al pasante de prueba (Pasantía 1000 horas)
+-- Proceso asignado al pasante de prueba (Proyecto de Grado 1000 horas)
 INSERT IGNORE INTO procesos (id_proceso, id_pasante, id_institucion, id_modalidad, fecha_inicio, fecha_fin, horas_requeridas, estado, observacion) VALUES
-(1, 1, 4, 1, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 6 MONTH), 1000, 'EN_CURSO', 'Asignación regular de 1000 horas para modalidad Pasantía en CCDB');
+(1, 1, 4, 1, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 6 MONTH), 1000, 'EN_CURSO', 'Asignación regular de 1000 horas para modalidad Proyecto de Grado en CCDB');
 
 -- Asistencias demostrativas iniciales para el pasante de prueba
 INSERT IGNORE INTO asistencias (id_asistencia, id_proceso, id_qr, fecha, hora_entrada, hora_salida, estado, observacion) VALUES
