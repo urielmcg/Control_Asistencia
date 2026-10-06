@@ -67,6 +67,12 @@ $currentUser = Auth::user();
                 <span>Reportes</span>
             </a>
         </li>
+        <li>
+            <a href="<?= APP_ROOT ?>views/tutores/index.php" class="<?= ($activeMenu === 'tutores') ? 'active' : '' ?>">
+                <i class="fa-solid fa-user-tie"></i>
+                <span>Tutores</span>
+            </a>
+        </li>
 
         <?php if ($currentUser && $currentUser['rol_name'] === 'ADMINISTRADOR'): ?>
         <div class="sidebar-heading">Administración</div>
