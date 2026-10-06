@@ -13,11 +13,15 @@ image.png
 # Local test leftovers (curl jars, probes, sample uploads)
 *.pdf
 q*.html
+*_out.html
+adm_*.html
+asg*.html
+turno_*.html
+tutor_*.html
 jar.txt
 login_out.html
 pas_out.html
 probe.html
-tutor_*.html
 
 # PHP logs
 *.log
