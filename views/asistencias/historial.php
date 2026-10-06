@@ -14,6 +14,16 @@ $id_pasante = isset($_GET['id_pasante']) ? (int)$_GET['id_pasante'] : 0;
 $fecha_desde = trim($_GET['fecha_desde'] ?? '');
 $fecha_hasta = trim($_GET['fecha_hasta'] ?? '');
 
+// Interns only ever see their own records, regardless of URL parameters
+$esPropio = false;
+if (Auth::isPasante()) {
+    $stmtOwn = $db->prepare("SELECT id_pasante FROM pasantes WHERE ci = :ci LIMIT 1");
+    $stmtOwn->execute([':ci' => trim(Auth::user()['ci'] ?? '')]);
+    $own = $stmtOwn->fetch();
+    $id_pasante = $own ? (int)$own['id_pasante'] : -1;
+    $esPropio = true;
+}
+
 $sql = "SELECT a.*, p.nombres, p.apellidos, p.ci, inst.nombre AS institucion, m.nombre AS modalidad,
                ROUND(TIME_TO_SEC(TIMEDIFF(a.hora_salida, a.hora_entrada)) / 3600.0, 2) AS horas_calculadas
         FROM asistencias a
@@ -59,18 +69,21 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <div class="card">
             <div class="card-header-flex">
                 <div>
-                    <h3 class="card-title">Historial General de Asistencias</h3>
+                    <h3 class="card-title"><?= $esPropio ? 'Mis Asistencias' : 'Historial General de Asistencias' ?></h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
                         Auditoría y revisión de horas de entrada, salida y tiempo efectivo.
                     </p>
                 </div>
+                <?php if (!$esPropio): ?>
                 <a href="registrar_qr.php" class="btn btn-danger">
                     <i class="fa-solid fa-qrcode"></i> Ir a Marcado QR
                 </a>
+                <?php endif; ?>
             </div>
 
             <!-- Filtros -->
             <form method="GET" action="historial.php" style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; background: #f8fafc; padding: 16px; border-radius: 8px;">
+                <?php if (!$esPropio): ?>
                 <div style="flex: 1; min-width: 220px;">
                     <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Pasante:</label>
                     <select name="id_pasante" class="form-control" style="margin-top: 4px;">
@@ -82,6 +95,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <?php endif; ?>
 
                 <div style="width: 170px;">
                     <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Desde:</label>

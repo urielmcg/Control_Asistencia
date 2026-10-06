@@ -3,7 +3,7 @@
  * Lista de Pasantes con Búsqueda y Filtros
  */
 require_once __DIR__ . '/../../config/auth.php';
-Auth::requireLogin();
+Auth::requireStaff();
 
 $pageTitle = 'Gestión de Pasantes';
 $activeMenu = 'pasantes';

@@ -3,7 +3,7 @@
  * Gestión de Sanciones y Atrasos
  */
 require_once __DIR__ . '/../../config/auth.php';
-Auth::requireLogin();
+Auth::requireStaff();
 
 $pageTitle = 'Sanciones y Descuentos';
 $activeMenu = 'sanciones';

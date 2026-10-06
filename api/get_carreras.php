@@ -5,7 +5,7 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/auth.php';
 
-if (!Auth::check()) {
+if (!Auth::isStaff()) {
     http_response_code(401);
     echo json_encode(['error' => 'No autorizado']);
     exit;

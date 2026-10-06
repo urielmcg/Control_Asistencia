@@ -4,7 +4,7 @@
  * Vista apta para pantalla e impresión formal.
  */
 require_once __DIR__ . '/../../config/auth.php';
-Auth::requireLogin();
+Auth::requireStaff();
 
 $pageTitle = 'Reporte de Avance y Certificación';
 $activeMenu = 'reportes';

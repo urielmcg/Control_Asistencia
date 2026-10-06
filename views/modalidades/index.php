@@ -3,7 +3,7 @@
  * Lista de Modalidades del Sistema
  */
 require_once __DIR__ . '/../../config/auth.php';
-Auth::requireLogin();
+Auth::requireStaff();
 
 $pageTitle = 'Modalidades de Graduación / Pasantía';
 $activeMenu = 'modalidades';
@@ -20,19 +20,19 @@ $tab = ($_GET['tab'] ?? 'activas') === 'inactivas' ? 'inactivas' : 'activas';
 $stmtSol = $db->prepare("SELECT pr.*, p.nombres, p.apellidos, p.ci, p.id_pasante,
                                 i.nombre AS institucion, c.nombre AS carrera,
                                 m.nombre AS modalidad,
-                                t.nombre AS tutor
+                                t.nombre AS tutor,
+                                tu.nombre AS turno_nombre, tu.hora_inicio AS turno_ini, tu.hora_fin AS turno_fin
                          FROM procesos pr
                          INNER JOIN pasantes p ON pr.id_pasante = p.id_pasante
                          INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
                          LEFT JOIN instituciones i ON pr.id_institucion = i.id_institucion
                          LEFT JOIN carreras c ON p.id_carrera = c.id_carrera
                          LEFT JOIN tutores t ON pr.id_tutor = t.id_tutor
+                         LEFT JOIN turnos tu ON pr.id_turno = tu.id_turno
                          WHERE " . ($tab === 'activas' ? "pr.estado = 'EN_CURSO'" : "pr.estado <> 'EN_CURSO'") . "
                          ORDER BY pr.id_proceso DESC");
 $stmtSol->execute();
 $solicitudes = $stmtSol->fetchAll();
-
-$turnos = ['MANANA' => 'Mañana · 9:00–12:00', 'TARDE' => 'Tarde · 15:00–18:00'];
 
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
@@ -115,6 +115,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <a href="asignar.php" class="btn btn-primary btn-sm">
                     <i class="fa-solid fa-plus"></i> Nueva modalidad
                 </a>
+                <a href="turnos.php" class="btn btn-outline btn-sm" style="margin-left: 8px;">
+                    <i class="fa-solid fa-clock"></i> Turnos
+                </a>
             </div>
 
             <div style="display: flex; gap: 10px; margin-bottom: 16px;">
@@ -174,7 +177,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     <td>
                                         <?= !empty($sol['tutor']) ? htmlspecialchars($sol['tutor']) : '<span style="color: var(--text-muted);">No asignado</span>' ?>
                                     </td>
-                                    <td><?= htmlspecialchars($turnos[$sol['turno']] ?? '—') ?></td>
+                                    <td><?= !empty($sol['turno_nombre']) ? htmlspecialchars($sol['turno_nombre'] . ' · ' . substr($sol['turno_ini'], 0, 5) . '–' . substr($sol['turno_fin'], 0, 5)) : '—' ?></td>
                                     <td><?= $meses !== null ? htmlspecialchars($meses . ' meses') : '—' ?></td>
                                     <td>
                                         <?php if ($sol['estado'] === 'EN_CURSO'): ?>

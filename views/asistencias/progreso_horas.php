@@ -10,10 +10,18 @@ $pageTitle = 'Progreso de Horas';
 $activeMenu = 'progreso_horas';
 $db = Database::getConnection();
 
-// Consulta a la vista vista_horas_proceso
-$sql = "SELECT * FROM vista_horas_proceso ORDER BY horas_acumuladas DESC";
-$stmt = $db->query($sql);
-$procesosHoras = $stmt->fetchAll();
+// Consulta a la vista vista_horas_proceso (interns only see their own row)
+if (Auth::isPasante()) {
+    $stmt = $db->prepare("SELECT * FROM vista_horas_proceso WHERE ci = :ci ORDER BY horas_acumuladas DESC");
+    $stmt->execute([':ci' => trim(Auth::user()['ci'] ?? '')]);
+    $procesosHoras = $stmt->fetchAll();
+    $esPropio = true;
+} else {
+    $sql = "SELECT * FROM vista_horas_proceso ORDER BY horas_acumuladas DESC";
+    $stmt = $db->query($sql);
+    $procesosHoras = $stmt->fetchAll();
+    $esPropio = false;
+}
 
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
@@ -26,14 +34,16 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <div class="card">
             <div class="card-header-flex">
                 <div>
-                    <h3 class="card-title">Avance y Cumplimiento de Horas de Pasantía</h3>
+                    <h3 class="card-title"><?= $esPropio ? 'Mi Progreso de Horas' : 'Avance y Cumplimiento de Horas de Pasantía' ?></h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
                         Monitoreo hacia las 1,000 horas reglamentarias según convenio institucional.
                     </p>
                 </div>
+                <?php if (!$esPropio): ?>
                 <a href="../modalidades/reporte_avance.php" class="btn btn-primary">
                     <i class="fa-solid fa-print"></i> Reporte Imprimible
                 </a>
+                <?php endif; ?>
             </div>
 
             <div class="table-responsive">

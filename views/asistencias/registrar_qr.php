@@ -4,7 +4,7 @@
  * Centro Cultural Don Bosco
  */
 require_once __DIR__ . '/../../config/auth.php';
-Auth::requireLogin();
+Auth::requireStaff();
 
 $pageTitle = 'Registro de Asistencia QR';
 $activeMenu = 'asistencias_qr';

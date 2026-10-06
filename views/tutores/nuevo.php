@@ -3,7 +3,7 @@
  * Registrar Tutor y asignarlo a postulantes de Trabajo Dirigido
  */
 require_once __DIR__ . '/../../config/auth.php';
-Auth::requireLogin();
+Auth::requireStaff();
 
 $pageTitle = 'Registrar Tutor';
 $activeMenu = 'tutores';

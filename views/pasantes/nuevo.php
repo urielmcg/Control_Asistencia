@@ -3,7 +3,7 @@
  * Registro de Nuevo Pasante (formulario extendido con acceso, fechas y documentos)
  */
 require_once __DIR__ . '/../../config/auth.php';
-Auth::requireLogin();
+Auth::requireStaff();
 
 $pageTitle = 'Nuevo Pasante';
 $activeMenu = 'pasantes';

@@ -65,6 +65,23 @@ class Auth {
     }
 
     /**
+     * Whether the current user is operational staff (administrators or personnel).
+     */
+    public static function isStaff() {
+        if (!self::check()) {
+            return false;
+        }
+        return in_array($_SESSION['user_role_name'] ?? '', ['ADMINISTRADOR', 'PERSONAL'], true);
+    }
+
+    /**
+     * Whether the current user logs in with the intern role.
+     */
+    public static function isPasante() {
+        return self::check() && (($_SESSION['user_role_name'] ?? '') === 'PASANTE');
+    }
+
+    /**
      * Exige uno o varios roles específicos
      * @param array|string $roles
      */
@@ -81,6 +98,13 @@ class Auth {
             header("Location: " . $rootPath . "index.php");
             exit;
         }
+    }
+
+    /**
+     * Exige rol operativo (ADMINISTRADOR o PERSONAL). Pasantes are redirected.
+     */
+    public static function requireStaff() {
+        self::requireRole(['ADMINISTRADOR', 'PERSONAL']);
     }
 
     /**

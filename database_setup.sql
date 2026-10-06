@@ -163,7 +163,7 @@ CREATE TABLE IF NOT EXISTS procesos (
     id_institucion INT UNSIGNED NOT NULL,
     id_modalidad INT UNSIGNED NOT NULL,
     id_tutor INT UNSIGNED NULL,
-    turno VARCHAR(20) NULL,
+    id_turno INT UNSIGNED NULL,
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE NULL,
     horas_requeridas INT UNSIGNED NOT NULL,
@@ -329,6 +329,29 @@ CREATE TABLE IF NOT EXISTS auditoria (
         ON UPDATE CASCADE
         ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+-- 18. TABLA: TURNOS
+CREATE TABLE IF NOT EXISTS turnos (
+    id_turno INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    estado TINYINT(1) NOT NULL DEFAULT 1,
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_turno_horas
+        CHECK (hora_fin > hora_inicio)
+) ENGINE=InnoDB;
+
+ALTER TABLE procesos ADD CONSTRAINT fk_procesos_turno
+    FOREIGN KEY (id_turno)
+    REFERENCES turnos(id_turno)
+    ON UPDATE CASCADE
+    ON DELETE SET NULL;
+
+-- Turnos iniciales
+INSERT IGNORE INTO turnos (id_turno, nombre, hora_inicio, hora_fin) VALUES
+(1, 'Mañana', '09:00:00', '12:00:00'),
+(2, 'Tarde', '15:00:00', '18:00:00');
 
 -- ============================================================
 -- ÍNDICES DE RENDIMIENTO

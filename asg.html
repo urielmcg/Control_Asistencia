@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asignar Modalidad - CCDB Sistema Web</title>
+    <!-- Google Fonts & Font Awesome CDN -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Estilos del Sistema -->
+    <link rel="stylesheet" href="../../assets/css/style.css">
+</head>
+<body>
+<aside class="sidebar">
+    <a href="../../index.php" class="sidebar-brand">
+        <img src="../../assets/img/logo_donbosco.svg" alt="Logo Don Bosco CCDB">
+        <div class="sidebar-brand-text">
+            <h2>Don Bosco</h2>
+            <span>CCDB Panel</span>
+        </div>
+    </a>
+
+    <ul class="sidebar-menu">
+        <div class="sidebar-heading">Principal</div>
+        <li>
+            <a href="../../index.php" class="">
+                <i class="fa-solid fa-house"></i>
+                <span>Inicio</span>
+            </a>
+        </li>
+
+        <div class="sidebar-heading">Gestión Operativa</div>
+                <li>
+            <a href="../../views/pasantes/index.php" class="">
+                <i class="fa-solid fa-user-graduate"></i>
+                <span>Pasantes</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/modalidades/index.php" class="active">
+                <i class="fa-solid fa-folder-open"></i>
+                <span>Modalidades</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/asistencias/registrar_qr.php" class="">
+                <i class="fa-solid fa-qrcode"></i>
+                <span>Asistencia QR</span>
+            </a>
+        </li>
+                <li>
+            <a href="../../views/asistencias/historial.php" class="">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>Historial Asistencias</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/asistencias/progreso_horas.php" class="">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Progreso de Horas</span>
+            </a>
+        </li>
+
+                <div class="sidebar-heading">Supervisión y Control</div>
+        <li>
+            <a href="../../views/sanciones/index.php" class="">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Sanciones</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/modalidades/reporte_avance.php" class="">
+                <i class="fa-solid fa-file-contract"></i>
+                <span>Reportes</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/tutores/index.php" class="">
+                <i class="fa-solid fa-user-tie"></i>
+                <span>Tutores</span>
+            </a>
+        </li>
+        
+                <div class="sidebar-heading">Administración</div>
+        <li>
+            <a href="../../views/usuarios/index.php" class="">
+                <i class="fa-solid fa-users-gear"></i>
+                <span>Gestión de Usuarios</span>
+            </a>
+        </li>
+            </ul>
+
+    <div class="sidebar-footer">
+        <a href="../../logout.php" class="btn-sidebar-logout" onclick="return confirm('¿Está seguro de cerrar sesión?');">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <span>Cerrar sesión</span>
+        </a>
+    </div>
+</aside>
+
+<div class="main-wrapper">
+    <header class="top-navbar">
+    <div class="nav-left">
+        <h3>Asignar Modalidad</h3>
+    </div>
+
+    <div class="nav-right">
+        <div class="user-badge">
+            <div class="user-avatar">
+                <i class="fa-solid fa-user-tie"></i>
+            </div>
+            <div class="user-info">
+                <div class="user-name">Bienvenido, Administrador CCDB</div>
+                <div class="user-role">ADMINISTRADOR</div>
+            </div>
+        </div>
+
+        <a href="../../logout.php" class="btn-logout-nav" title="Cerrar sesión" onclick="return confirm('¿Desea cerrar la sesión actual?');">
+            <i class="fa-solid fa-power-off"></i>
+            <span>Cerrar sesión</span>
+        </a>
+    </div>
+</header>
+
+    <main class="content-body">
+        <div class="card" style="max-width: 800px; margin: 0 auto;">
+            <div class="card-header-flex">
+                <div>
+                    <h3 class="card-title">Asignar Modalidad / Apertura de Proceso</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+                        Vincula a un estudiante activo con su modalidad de titulación o pasantía y define la meta de horas.
+                    </p>
+                </div>
+                <a href="index.php" class="btn btn-outline">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a Modalidades
+                </a>
+            </div>
+
+            
+            <form action="asignar.php" method="POST">
+                <div class="form-grid">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="id_pasante">Seleccionar Pasante *</label>
+                        <select name="id_pasante" id="id_pasante" class="form-control" required>
+                            <option value="">-- Seleccionar Estudiante --</option>
+                                                            <option value="1" >
+                                    Mamani Quispe Carlos Andr?s (CI: 8329410)
+                                </option>
+                                                            <option value="2" >
+                                    Prueba CCDB Disney (CI: 12345678)
+                                </option>
+                                                    </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_modalidad">Modalidad de Titulación / Práctica *</label>
+                        <select name="id_modalidad" id="id_modalidad" class="form-control" required>
+                            <option value="">-- Seleccionar Modalidad --</option>
+                                                            <option value="1" >
+                                    Proyecto de Grado (Base 1000 hrs)
+                                </option>
+                                                            <option value="2" >
+                                    Trabajo Dirigido (Base 1000 hrs)
+                                </option>
+                                                    </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="horas_requeridas">Horas Requeridas *</label>
+                        <input type="number" name="horas_requeridas" id="horas_requeridas" class="form-control" value="1000" min="10" step="10" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_institucion">Institución Receptora *</label>
+                        <select name="id_institucion" id="id_institucion" class="form-control" required>
+                                                            <option value="4" selected>
+                                    Centro Cultural Don Bosco (CCDB)                                </option>
+                                                            <option value="1" >
+                                    INCOS La Paz                                </option>
+                                                            <option value="2" >
+                                    Universidad Mayor de San Andr?s (UMSA)                                </option>
+                                                            <option value="3" >
+                                    Universidad P?blica de El Alto (UPEA)                                </option>
+                                                    </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fecha_inicio">Fecha de Inicio *</label>
+                        <input type="date" name="fecha_inicio" id="fecha_inicio" class="form-control" value="2026-10-07" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fecha_fin">Fecha de Fin Estimada</label>
+                        <input type="date" name="fecha_fin" id="fecha_fin" class="form-control" value="2027-04-07">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="id_turno">Turno</label>
+                        <select name="id_turno" id="id_turno" class="form-control">
+                            <option value="0">-- Sin turno --</option>
+                                                            <option value="1">
+                                    Mañana · 09:00–12:00                                </option>
+                                                            <option value="2">
+                                    Tarde · 15:00–18:00                                </option>
+                                                    </select>
+                        <small style="color: var(--text-muted);"><a href="turnos.php">Administrar turnos</a></small>
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="observacion">Observaciones o Términos del Convenio</label>
+                        <textarea name="observacion" id="observacion" rows="3" class="form-control" placeholder="Detalles adicionales, proyecto asignado, tutor guía..."></textarea>
+                    </div>
+                </div>
+
+                <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+                    <a href="index.php" class="btn btn-outline">Cancelar</a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa-solid fa-check"></i> Asignar Proceso
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+        <footer class="main-footer">
+        <div>
+            <strong>Centro Cultural Don Bosco (CCDB)</strong> &copy; 2026. Todos los derechos reservados.
+        </div>
+        <div>
+            <span>Sistema Web de Control y Seguimiento de Pasantes &bull; V1.0</span>
+        </div>
+    </footer>
+</body>
+</html>
+</div>

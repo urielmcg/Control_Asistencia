@@ -3,7 +3,7 @@
  * Asignar Modalidad a Pasante creando un nuevo Proceso
  */
 require_once __DIR__ . '/../../config/auth.php';
-Auth::requireLogin();
+Auth::requireStaff();
 
 $pageTitle = 'Asignar Modalidad';
 $activeMenu = 'modalidades';
@@ -21,22 +21,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fecha_fin = !empty($_POST['fecha_fin']) ? trim($_POST['fecha_fin']) : null;
     $horas_requeridas = (int)($_POST['horas_requeridas'] ?? 1000);
     $observacion = trim($_POST['observacion'] ?? '');
-    $turno = trim($_POST['turno'] ?? '');
-    if ($turno !== '' && !in_array($turno, ['MANANA', 'TARDE'], true)) {
-        $turno = '';
-    }
+    $id_turno = (int)($_POST['id_turno'] ?? 0);
 
     if ($id_pasante <= 0 || $id_modalidad <= 0 || $horas_requeridas <= 0) {
         $error = 'Por favor seleccione al pasante, la modalidad e ingrese las horas requeridas válidas.';
     } else {
         try {
-            $stmt = $db->prepare("INSERT INTO procesos (id_pasante, id_institucion, id_modalidad, id_tutor, turno, fecha_inicio, fecha_fin, horas_requeridas, estado, observacion)
-                                  VALUES (:id_pasante, :id_institucion, :id_modalidad, NULL, :turno, :fecha_inicio, :fecha_fin, :horas_requeridas, 'EN_CURSO', :observacion)");
+            $stmtTurno = $db->prepare("SELECT id_turno FROM turnos WHERE id_turno = :id AND estado = 1");
+            $stmtTurno->execute([':id' => $id_turno]);
+            if ($id_turno > 0 && !$stmtTurno->fetch()) {
+                throw new Exception('Turno seleccionado inválido.');
+            }
+            $stmt = $db->prepare("INSERT INTO procesos (id_pasante, id_institucion, id_modalidad, id_tutor, id_turno, fecha_inicio, fecha_fin, horas_requeridas, estado, observacion)
+                                  VALUES (:id_pasante, :id_institucion, :id_modalidad, NULL, :id_turno, :fecha_inicio, :fecha_fin, :horas_requeridas, 'EN_CURSO', :observacion)");
             $stmt->execute([
                 ':id_pasante'        => $id_pasante,
                 ':id_institucion'    => $id_institucion,
                 ':id_modalidad'      => $id_modalidad,
-                ':turno'             => $turno !== '' ? $turno : null,
+                ':id_turno'          => $id_turno > 0 ? $id_turno : null,
                 ':fecha_inicio'      => $fecha_inicio,
                 ':fecha_fin'         => $fecha_fin,
                 ':horas_requeridas'  => $horas_requeridas,
@@ -59,6 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pasantes = $db->query("SELECT id_pasante, nombres, apellidos, ci FROM pasantes WHERE estado = 'ACTIVO' ORDER BY apellidos ASC")->fetchAll();
 $modalidades = $db->query("SELECT * FROM modalidades WHERE estado = 1 ORDER BY nombre ASC")->fetchAll();
 $instituciones = $db->query("SELECT id_institucion, nombre FROM instituciones WHERE estado = 1 ORDER BY nombre ASC")->fetchAll();
+$turnos = $db->query("SELECT * FROM turnos WHERE estado = 1 ORDER BY hora_inicio ASC")->fetchAll();
 
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
@@ -141,12 +144,16 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </div>
 
                     <div class="form-group">
-                        <label for="turno">Turno</label>
-                        <select name="turno" id="turno" class="form-control">
-                            <option value="">-- Sin turno --</option>
-                            <option value="MANANA">Mañana · 9:00–12:00</option>
-                            <option value="TARDE">Tarde · 15:00–18:00</option>
+                        <label for="id_turno">Turno</label>
+                        <select name="id_turno" id="id_turno" class="form-control">
+                            <option value="0">-- Sin turno --</option>
+                            <?php foreach ($turnos as $t): ?>
+                                <option value="<?= $t['id_turno'] ?>">
+                                    <?= htmlspecialchars($t['nombre']) ?> · <?= htmlspecialchars(substr($t['hora_inicio'], 0, 5)) ?>–<?= htmlspecialchars(substr($t['hora_fin'], 0, 5)) ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
+                        <small style="color: var(--text-muted);"><a href="turnos.php">Administrar turnos</a></small>
                     </div>
 
                     <div class="form-group" style="grid-column: 1 / -1;">

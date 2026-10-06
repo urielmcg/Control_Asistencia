@@ -3,7 +3,7 @@
  * Edición de Pasante
  */
 require_once __DIR__ . '/../../config/auth.php';
-Auth::requireLogin();
+Auth::requireStaff();
 
 $pageTitle = 'Editar Pasante';
 $activeMenu = 'pasantes';

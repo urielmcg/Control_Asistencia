@@ -4,7 +4,7 @@
  * Centro Cultural Don Bosco
  */
 require_once __DIR__ . '/../../config/auth.php';
-Auth::requireLogin();
+Auth::requireStaff();
 
 $pageTitle = 'Credencial QR de Pasante';
 $activeMenu = 'pasantes';

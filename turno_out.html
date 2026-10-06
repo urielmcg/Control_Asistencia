@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turnos - CCDB Sistema Web</title>
+    <!-- Google Fonts & Font Awesome CDN -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Estilos del Sistema -->
+    <link rel="stylesheet" href="../../assets/css/style.css">
+</head>
+<body>
+<aside class="sidebar">
+    <a href="../../index.php" class="sidebar-brand">
+        <img src="../../assets/img/logo_donbosco.svg" alt="Logo Don Bosco CCDB">
+        <div class="sidebar-brand-text">
+            <h2>Don Bosco</h2>
+            <span>CCDB Panel</span>
+        </div>
+    </a>
+
+    <ul class="sidebar-menu">
+        <div class="sidebar-heading">Principal</div>
+        <li>
+            <a href="../../index.php" class="">
+                <i class="fa-solid fa-house"></i>
+                <span>Inicio</span>
+            </a>
+        </li>
+
+        <div class="sidebar-heading">Gestión Operativa</div>
+                <li>
+            <a href="../../views/pasantes/index.php" class="">
+                <i class="fa-solid fa-user-graduate"></i>
+                <span>Pasantes</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/modalidades/index.php" class="active">
+                <i class="fa-solid fa-folder-open"></i>
+                <span>Modalidades</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/asistencias/registrar_qr.php" class="">
+                <i class="fa-solid fa-qrcode"></i>
+                <span>Asistencia QR</span>
+            </a>
+        </li>
+                <li>
+            <a href="../../views/asistencias/historial.php" class="">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>Historial Asistencias</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/asistencias/progreso_horas.php" class="">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Progreso de Horas</span>
+            </a>
+        </li>
+
+                <div class="sidebar-heading">Supervisión y Control</div>
+        <li>
+            <a href="../../views/sanciones/index.php" class="">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Sanciones</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/modalidades/reporte_avance.php" class="">
+                <i class="fa-solid fa-file-contract"></i>
+                <span>Reportes</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/tutores/index.php" class="">
+                <i class="fa-solid fa-user-tie"></i>
+                <span>Tutores</span>
+            </a>
+        </li>
+        
+                <div class="sidebar-heading">Administración</div>
+        <li>
+            <a href="../../views/usuarios/index.php" class="">
+                <i class="fa-solid fa-users-gear"></i>
+                <span>Gestión de Usuarios</span>
+            </a>
+        </li>
+            </ul>
+
+    <div class="sidebar-footer">
+        <a href="../../logout.php" class="btn-sidebar-logout" onclick="return confirm('¿Está seguro de cerrar sesión?');">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <span>Cerrar sesión</span>
+        </a>
+    </div>
+</aside>
+
+<div class="main-wrapper">
+    <header class="top-navbar">
+    <div class="nav-left">
+        <h3>Turnos</h3>
+    </div>
+
+    <div class="nav-right">
+        <div class="user-badge">
+            <div class="user-avatar">
+                <i class="fa-solid fa-user-tie"></i>
+            </div>
+            <div class="user-info">
+                <div class="user-name">Bienvenido, Administrador CCDB</div>
+                <div class="user-role">ADMINISTRADOR</div>
+            </div>
+        </div>
+
+        <a href="../../logout.php" class="btn-logout-nav" title="Cerrar sesión" onclick="return confirm('¿Desea cerrar la sesión actual?');">
+            <i class="fa-solid fa-power-off"></i>
+            <span>Cerrar sesión</span>
+        </a>
+    </div>
+</header>
+
+    <main class="content-body">
+        <div class="card" style="max-width: 900px; margin: 0 auto 24px auto;">
+            <div class="card-header-flex">
+                <div>
+                    <h3 class="card-title">Nuevo Turno</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+                        Los turnos se asignan a los procesos desde Asignar Modalidad.
+                    </p>
+                </div>
+                <a href="index.php" class="btn btn-outline">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a Modalidades
+                </a>
+            </div>
+
+                                        <div class="alert alert-success"><span>Turno guardado exitosamente.</span></div>
+                            
+            <form action="turnos.php" method="POST">
+                <input type="hidden" name="action" value="crear">
+                                <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr auto; align-items: end;">
+                    <div class="form-group">
+                        <label for="nombre">Nombre *</label>
+                        <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Mañana, Tarde, Noche..." required value="">
+                    </div>
+                    <div class="form-group">
+                        <label for="hora_inicio">Inicio *</label>
+                        <input type="time" id="hora_inicio" name="hora_inicio" class="form-control" required value="">
+                    </div>
+                    <div class="form-group">
+                        <label for="hora_fin">Fin *</label>
+                        <input type="time" id="hora_fin" name="hora_fin" class="form-control" required value="">
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-danger">Guardar</button>
+                                            </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="card" style="max-width: 900px; margin: 0 auto;">
+            <h3 class="card-title" style="margin-bottom: 16px;">Turnos definidos</h3>
+            <div class="table-responsive">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Horario</th>
+                            <th>Procesos en curso</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                                                    <tr>
+                                <td><strong>Mañana</strong></td>
+                                <td>09:00 – 12:00</td>
+                                <td>0</td>
+                                <td>
+                                    <span class="badge badge-success">Activo</span>                                </td>
+                                <td style="white-space: nowrap;">
+                                    <a href="turnos.php?editar=1" class="btn btn-outline btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+                                    <a href="turnos.php?toggle=1" class="btn btn-outline btn-sm" title="Activar/Desactivar" onclick="return confirm('¿Cambiar el estado de este turno?');">
+                                        <i class="fa-solid fa-power-off"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                                                    <tr>
+                                <td><strong>Tarde</strong></td>
+                                <td>15:00 – 18:00</td>
+                                <td>1</td>
+                                <td>
+                                    <span class="badge badge-success">Activo</span>                                </td>
+                                <td style="white-space: nowrap;">
+                                    <a href="turnos.php?editar=2" class="btn btn-outline btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+                                    <a href="turnos.php?toggle=2" class="btn btn-outline btn-sm" title="Activar/Desactivar" onclick="return confirm('¿Cambiar el estado de este turno?');">
+                                        <i class="fa-solid fa-power-off"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                                                    <tr>
+                                <td><strong>Noche</strong></td>
+                                <td>19:00 – 21:00</td>
+                                <td>0</td>
+                                <td>
+                                    <span class="badge badge-success">Activo</span>                                </td>
+                                <td style="white-space: nowrap;">
+                                    <a href="turnos.php?editar=3" class="btn btn-outline btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+                                    <a href="turnos.php?toggle=3" class="btn btn-outline btn-sm" title="Activar/Desactivar" onclick="return confirm('¿Cambiar el estado de este turno?');">
+                                        <i class="fa-solid fa-power-off"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                                            </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+        <footer class="main-footer">
+        <div>
+            <strong>Centro Cultural Don Bosco (CCDB)</strong> &copy; 2026. Todos los derechos reservados.
+        </div>
+        <div>
+            <span>Sistema Web de Control y Seguimiento de Pasantes &bull; V1.0</span>
+        </div>
+    </footer>
+</body>
+</html>
+</div>

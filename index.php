@@ -23,6 +23,38 @@ try {
     $totalSanciones = 0;
 }
 
+// Personal panel for interns: only their own process, hours and today's mark
+$esPasante = Auth::isPasante();
+$miPanel = null;
+if ($esPasante) {
+    try {
+        $ci = trim(Auth::user()['ci'] ?? '');
+        $stmtP = $db->prepare("SELECT pr.*, m.nombre AS modalidad, t.nombre AS tutor,
+                                      tu.nombre AS turno_nombre, tu.hora_inicio AS turno_ini, tu.hora_fin AS turno_fin
+                               FROM pasantes p
+                               INNER JOIN procesos pr ON pr.id_pasante = p.id_pasante
+                               INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                               LEFT JOIN tutores t ON pr.id_tutor = t.id_tutor
+                               LEFT JOIN turnos tu ON pr.id_turno = tu.id_turno
+                               WHERE p.ci = :ci AND pr.estado = 'EN_CURSO'
+                               ORDER BY pr.id_proceso DESC LIMIT 1");
+        $stmtP->execute([':ci' => $ci]);
+        $proc = $stmtP->fetch();
+        $stmtH = $db->prepare("SELECT * FROM vista_horas_proceso WHERE ci = :ci LIMIT 1");
+        $stmtH->execute([':ci' => $ci]);
+        $horas = $stmtH->fetch();
+        $stmtHoy = $db->prepare("SELECT a.hora_entrada, a.hora_salida FROM asistencias a
+                                 INNER JOIN procesos pr ON a.id_proceso = pr.id_proceso
+                                 INNER JOIN pasantes p ON pr.id_pasante = p.id_pasante
+                                 WHERE p.ci = :ci AND a.fecha = CURDATE() LIMIT 1");
+        $stmtHoy->execute([':ci' => $ci]);
+        $hoy = $stmtHoy->fetch();
+        $miPanel = ['proceso' => $proc, 'horas' => $horas, 'hoy' => $hoy];
+    } catch (Exception $e) {
+        $miPanel = null;
+    }
+}
+
 // Últimos pasantes registrados
 $stmtUltimos = $db->query("SELECT p.*, i.nombre AS institucion, c.nombre AS carrera 
                            FROM pasantes p
@@ -39,6 +71,68 @@ require_once __DIR__ . '/includes/sidebar.php';
     <?php require_once __DIR__ . '/includes/navbar.php'; ?>
 
     <main class="content-body">
+        <?php if ($esPasante): ?>
+        <!-- Panel personal del pasante -->
+        <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--primary-blue); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
+            Mi Panel
+        </h2>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-icon" style="background:#e0f2fe; color:#0284c7;">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div class="stat-data">
+                    <h4 style="font-size: 1rem;"><?= htmlspecialchars($miPanel['proceso']['modalidad'] ?? 'Sin proceso') ?></h4>
+                    <span>Mi modalidad</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon" style="background:#dcfce7; color:#16a34a;">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+                <div class="stat-data">
+                    <h4><?= htmlspecialchars($miPanel['horas']['horas_acumuladas'] ?? '0') ?> hrs</h4>
+                    <span>Mis horas acumuladas</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon" style="background:#fef3c7; color:#d97706;">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <div class="stat-data">
+                    <h4 style="font-size: 1rem;">
+                        <?= !empty($miPanel['hoy']['hora_entrada']) ? htmlspecialchars($miPanel['hoy']['hora_entrada'] . ($miPanel['hoy']['hora_salida'] ? ' - ' . $miPanel['hoy']['hora_salida'] : ' (en jornada)')) : 'Sin marcar hoy' ?>
+                    </h4>
+                    <span>Mi marcación de hoy</span>
+                </div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-icon" style="background:#ede9fe; color:#7c3aad;">
+                    <i class="fa-solid fa-user-tie"></i>
+                </div>
+                <div class="stat-data">
+                    <h4 style="font-size: 1rem;"><?= htmlspecialchars($miPanel['proceso']['tutor'] ?? 'Sin tutor') ?></h4>
+                    <span>Mi tutor</span>
+                </div>
+            </div>
+        </div>
+        <div class="action-grid">
+            <a href="views/asistencias/historial.php" class="action-card">
+                <div class="action-icon-circle">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <h3>MIS ASISTENCIAS</h3>
+                <p>Entradas, salidas y horas trabajadas</p>
+            </a>
+            <a href="views/asistencias/progreso_horas.php" class="action-card">
+                <div class="action-icon-circle">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <h3>MI PROGRESO</h3>
+                <p>Avance hacia mis horas reglamentarias</p>
+            </a>
+        </div>
+        <?php else: ?>
         <!-- Tarjetas de Acción Rápida (Inspiradas en imagen_UI_UX.jpeg) -->
         <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--primary-blue); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
             Módulos Principales
@@ -176,6 +270,7 @@ require_once __DIR__ . '/includes/sidebar.php';
                 </table>
             </div>
         </div>
+        <?php endif; ?>
     </main>
 
     <?php require_once __DIR__ . '/includes/footer.php'; ?>

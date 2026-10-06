@@ -1,8 +1,10 @@
 <?php
 /**
  * Sidebar de navegación del Sistema Web CCDB
+ * Staff sees the full operational menu; PASANTE only sees their own activity.
  */
 $currentUser = Auth::user();
+$isStaff = Auth::isStaff();
 ?>
 <aside class="sidebar">
     <a href="<?= APP_ROOT ?>index.php" class="sidebar-brand">
@@ -23,6 +25,7 @@ $currentUser = Auth::user();
         </li>
 
         <div class="sidebar-heading">Gestión Operativa</div>
+        <?php if ($isStaff): ?>
         <li>
             <a href="<?= APP_ROOT ?>views/pasantes/index.php" class="<?= ($activeMenu === 'pasantes') ? 'active' : '' ?>">
                 <i class="fa-solid fa-user-graduate"></i>
@@ -41,19 +44,21 @@ $currentUser = Auth::user();
                 <span>Asistencia QR</span>
             </a>
         </li>
+        <?php endif; ?>
         <li>
             <a href="<?= APP_ROOT ?>views/asistencias/historial.php" class="<?= ($activeMenu === 'asistencias_historial') ? 'active' : '' ?>">
                 <i class="fa-solid fa-clock-rotate-left"></i>
-                <span>Historial Asistencias</span>
+                <span><?= $isStaff ? 'Historial Asistencias' : 'Mis Asistencias' ?></span>
             </a>
         </li>
         <li>
             <a href="<?= APP_ROOT ?>views/asistencias/progreso_horas.php" class="<?= ($activeMenu === 'progreso_horas') ? 'active' : '' ?>">
                 <i class="fa-solid fa-chart-line"></i>
-                <span>Progreso de Horas</span>
+                <span><?= $isStaff ? 'Progreso de Horas' : 'Mi Progreso' ?></span>
             </a>
         </li>
 
+        <?php if ($isStaff): ?>
         <div class="sidebar-heading">Supervisión y Control</div>
         <li>
             <a href="<?= APP_ROOT ?>views/sanciones/index.php" class="<?= ($activeMenu === 'sanciones') ? 'active' : '' ?>">
@@ -73,6 +78,7 @@ $currentUser = Auth::user();
                 <span>Tutores</span>
             </a>
         </li>
+        <?php endif; ?>
 
         <?php if ($currentUser && $currentUser['rol_name'] === 'ADMINISTRADOR'): ?>
         <div class="sidebar-heading">Administración</div>
