@@ -574,3 +574,70 @@ body {
   .top-navbar { padding: 0 16px; }
   .content-body { padding: 16px; }
 }
+
+/* Print: official-document look for reports. Loaded globally so views
+   that generate PDFs get it without any change to their own code. */
+@page {
+  size: A4;
+  margin: 12mm 10mm;
+}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  html, body {
+    background: #ffffff !important;
+  }
+
+  .content-body {
+    padding: 0 !important;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #94a3b8 !important;
+    border-radius: 10px !important;
+    margin-bottom: 14px !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .card-header-flex {
+    align-items: flex-start !important;
+  }
+
+  h2, h3, .card-title {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  table, thead {
+    page-break-inside: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+
+  .badge {
+    border: 1px solid currentColor !important;
+  }
+
+  .progress-container {
+    border: 1px solid #cbd5e1 !important;
+    height: 14px !important;
+  }
+}
