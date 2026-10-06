@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS procesos (
     id_institucion INT UNSIGNED NOT NULL,
     id_modalidad INT UNSIGNED NOT NULL,
     id_tutor INT UNSIGNED NULL,
+    turno VARCHAR(20) NULL,
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE NULL,
     horas_requeridas INT UNSIGNED NOT NULL,

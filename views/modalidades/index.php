@@ -15,6 +15,25 @@ $modalidades = $db->query("SELECT m.*,
                            FROM modalidades m 
                            ORDER BY m.id_modalidad ASC")->fetchAll();
 
+// Solicitudes por estado para la tabla inferior
+$tab = ($_GET['tab'] ?? 'activas') === 'inactivas' ? 'inactivas' : 'activas';
+$stmtSol = $db->prepare("SELECT pr.*, p.nombres, p.apellidos, p.ci, p.id_pasante,
+                                i.nombre AS institucion, c.nombre AS carrera,
+                                m.nombre AS modalidad,
+                                t.nombre AS tutor
+                         FROM procesos pr
+                         INNER JOIN pasantes p ON pr.id_pasante = p.id_pasante
+                         INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                         LEFT JOIN instituciones i ON pr.id_institucion = i.id_institucion
+                         LEFT JOIN carreras c ON p.id_carrera = c.id_carrera
+                         LEFT JOIN tutores t ON pr.id_tutor = t.id_tutor
+                         WHERE " . ($tab === 'activas' ? "pr.estado = 'EN_CURSO'" : "pr.estado <> 'EN_CURSO'") . "
+                         ORDER BY pr.id_proceso DESC");
+$stmtSol->execute();
+$solicitudes = $stmtSol->fetchAll();
+
+$turnos = ['MANANA' => 'Mañana · 9:00–12:00', 'TARDE' => 'Tarde · 15:00–18:00'];
+
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 ?>
@@ -83,6 +102,98 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 </td>
                             </tr>
                         <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 24px;">
+            <div class="card-header-flex">
+                <div>
+                    <h3 class="card-title">Modalidades activas</h3>
+                </div>
+                <a href="asignar.php" class="btn btn-primary btn-sm">
+                    <i class="fa-solid fa-plus"></i> Nueva modalidad
+                </a>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                <a href="index.php?tab=activas" class="btn btn-sm <?= $tab === 'activas' ? 'btn-primary' : 'btn-outline' ?>">
+                    Modalidades activas
+                </a>
+                <a href="index.php?tab=inactivas" class="btn btn-sm <?= $tab === 'inactivas' ? 'btn-primary' : 'btn-outline' ?>">
+                    Modalidades inactivas
+                </a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Modalidad</th>
+                            <th>Postulante</th>
+                            <th>Institución y carrera</th>
+                            <th>Tutor asignado</th>
+                            <th>Turno</th>
+                            <th>Horas / Tiempo proyectado</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($solicitudes)): ?>
+                            <tr>
+                                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                                    No hay solicitudes <?= $tab === 'activas' ? 'activas' : 'inactivas' ?>.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($solicitudes as $sol):
+                                $meses = null;
+                                if (!empty($sol['fecha_inicio']) && !empty($sol['fecha_fin'])) {
+                                    $d1 = new DateTime($sol['fecha_inicio']);
+                                    $d2 = new DateTime($sol['fecha_fin']);
+                                    if ($d2 >= $d1) {
+                                        $diff = $d1->diff($d2);
+                                        $meses = $diff->y * 12 + $diff->m;
+                                    }
+                                }
+                            ?>
+                                <tr>
+                                    <td>
+                                        <strong><?= htmlspecialchars($sol['modalidad']) ?></strong><br>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);">
+                                            <?= $sol['modalidad'] === 'Proyecto de Grado' ? 'Horas no aplican' : htmlspecialchars($sol['horas_requeridas'] . ' horas requeridas') ?>
+                                        </span>
+                                    </td>
+                                    <td><?= htmlspecialchars($sol['nombres'] . ' ' . $sol['apellidos']) ?></td>
+                                    <td>
+                                        <?= htmlspecialchars($sol['institucion'] ?? '-') ?><br>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);"><?= htmlspecialchars($sol['carrera'] ?? '') ?></span>
+                                    </td>
+                                    <td>
+                                        <?= !empty($sol['tutor']) ? htmlspecialchars($sol['tutor']) : '<span style="color: var(--text-muted);">No asignado</span>' ?>
+                                    </td>
+                                    <td><?= htmlspecialchars($turnos[$sol['turno']] ?? '—') ?></td>
+                                    <td><?= $meses !== null ? htmlspecialchars($meses . ' meses') : '—' ?></td>
+                                    <td>
+                                        <?php if ($sol['estado'] === 'EN_CURSO'): ?>
+                                            <span class="badge badge-success">ACTIVA</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-info"><?= htmlspecialchars($sol['estado']) ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="white-space: nowrap;">
+                                        <a href="../pasantes/editar.php?id=<?= $sol['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Editar postulante">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </a>
+                                        <a href="../asistencias/historial.php?id_pasante=<?= $sol['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Ver asistencias">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
