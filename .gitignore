@@ -10,6 +10,15 @@ odd/
 image.png
 *.png.bak
 
+# Local test leftovers (curl jars, probes, sample uploads)
+*.pdf
+q*.html
+jar.txt
+login_out.html
+pas_out.html
+probe.html
+tutor_*.html
+
 # PHP logs
 *.log
 
