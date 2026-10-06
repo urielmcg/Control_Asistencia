@@ -4,6 +4,14 @@ Desktop.ini
 
 # Local agent tracking (not part of the app)
 odd/
+.atl/
+
+# Pasted screenshots / attachments
+image.png
+*.png.bak
 
 # PHP logs
 *.log
+
+# Uploaded pasante documents (runtime data)
+uploads/
