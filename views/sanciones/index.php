@@ -311,8 +311,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </table>
                 </div>
             </div>
-        </div>
-    </main>
+        </main>
 
     <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
 </div>
