@@ -86,6 +86,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $uploads[$field] = $file;
         }
 
+        // Optional profile photo (JPG/PNG only)
+        $fotoFile = null;
+        if (!empty($_FILES['foto']) && $_FILES['foto']['error'] !== UPLOAD_ERR_NO_FILE) {
+            $fotoFile = $_FILES['foto'];
+            if ($fotoFile['error'] !== UPLOAD_ERR_OK || $fotoFile['size'] > $maxBytes) {
+                $error = 'La foto es inválida o supera los 8 MB permitidos.';
+            } else {
+                $fotoExt = strtolower(pathinfo($fotoFile['name'], PATHINFO_EXTENSION));
+                if (!in_array($fotoExt, ['jpg', 'jpeg', 'png'], true)
+                    || !in_array(mime_content_type($fotoFile['tmp_name']), ['image/jpeg', 'image/png'], true)) {
+                    $error = 'La foto debe ser JPG o PNG.';
+                    $fotoFile = null;
+                }
+            }
+        }
+
         if ($error === '') {
             try {
                 $db->beginTransaction();
@@ -171,6 +187,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                 }
 
+                // Store profile photo if provided
+                if ($fotoFile) {
+                    $fotoExt = strtolower(pathinfo($fotoFile['name'], PATHINFO_EXTENSION));
+                    $fotoName = 'foto_' . bin2hex(random_bytes(4)) . '.' . $fotoExt;
+                    if (!move_uploaded_file($fotoFile['tmp_name'], $baseDir . '/' . $fotoName)) {
+                        throw new Exception('No se pudo guardar la foto.');
+                    }
+                    $moved[] = $baseDir . '/' . $fotoName;
+                    $db->prepare("UPDATE pasantes SET foto = :ruta WHERE id_pasante = :id")
+                       ->execute([':ruta' => 'uploads/pasantes/' . $id_pasante . '/' . $fotoName, ':id' => $id_pasante]);
+                }
+
                 Auth::logAudit('CREAR_PASANTE', 'pasantes', $id_pasante, "Pasante registrado: $nombres $apellidos (CI: $ci)");
                 $db->commit();
 
@@ -246,6 +274,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <div class="form-group">
                         <label for="semestre">Semestre / Año Académico</label>
                         <input type="text" id="semestre" name="semestre" class="form-control" placeholder="Ej. 6to Semestre" value="<?= htmlspecialchars($_POST['semestre'] ?? '') ?>">
+                    </div>
+                    <div class="form-group">
+                        <label for="foto">Foto del pasante (JPG/PNG, máx. 8 MB)</label>
+                        <input type="file" id="foto" name="foto" class="form-control" accept=".jpg,.jpeg,.png">
                     </div>
                     <div class="form-group">
                         <label for="fecha_nacimiento">Fecha de nacimiento *</label>

@@ -143,6 +143,7 @@ CREATE TABLE pasantes (
 
     fecha_nacimiento DATE NULL,
     direccion TEXT NULL,
+    foto VARCHAR(255) NULL,
 
     estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
 

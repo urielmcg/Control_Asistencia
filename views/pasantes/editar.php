@@ -134,6 +134,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                 }
 
+                // Replace profile photo if provided
+                if (!empty($_FILES['foto']) && $_FILES['foto']['error'] !== UPLOAD_ERR_NO_FILE) {
+                    $fotoFile = $_FILES['foto'];
+                    if ($fotoFile['error'] !== UPLOAD_ERR_OK || $fotoFile['size'] > 8 * 1024 * 1024) {
+                        throw new Exception('La foto es inválida o supera los 8 MB permitidos.');
+                    }
+                    $fotoExt = strtolower(pathinfo($fotoFile['name'], PATHINFO_EXTENSION));
+                    if (!in_array($fotoExt, ['jpg', 'jpeg', 'png'], true)
+                        || !in_array(mime_content_type($fotoFile['tmp_name']), ['image/jpeg', 'image/png'], true)) {
+                        throw new Exception('La foto debe ser JPG o PNG.');
+                    }
+                    if (!is_dir($baseDir) && !mkdir($baseDir, 0755, true)) {
+                        throw new Exception('No se pudo crear la carpeta de documentos.');
+                    }
+                    $fotoName = 'foto_' . bin2hex(random_bytes(4)) . '.' . $fotoExt;
+                    if (!move_uploaded_file($fotoFile['tmp_name'], $baseDir . '/' . $fotoName)) {
+                        throw new Exception('No se pudo guardar la foto.');
+                    }
+                    $moved[] = $baseDir . '/' . $fotoName;
+                    if (!empty($pasante['foto'])) {
+                        $oldFoto = dirname(__DIR__, 2) . '/' . $pasante['foto'];
+                        if (is_file($oldFoto)) {
+                            unlink($oldFoto);
+                        }
+                    }
+                    $db->prepare("UPDATE pasantes SET foto = :ruta WHERE id_pasante = :id")
+                       ->execute([':ruta' => 'uploads/pasantes/' . $id_pasante . '/' . $fotoName, ':id' => $id_pasante]);
+                }
+
                 Auth::logAudit('EDITAR_PASANTE', 'pasantes', $id_pasante, "Pasante actualizado: $nombres $apellidos");
                 $db->commit();
                 $_SESSION['flash_success'] = 'Datos del pasante actualizados correctamente.';
@@ -235,6 +264,17 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <option value="INACTIVO" <?= ($pasante['estado'] === 'INACTIVO') ? 'selected' : '' ?>>Inactivo</option>
                             <option value="CONCLUIDO" <?= ($pasante['estado'] === 'CONCLUIDO') ? 'selected' : '' ?>>Concluido</option>
                         </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="foto">Foto del pasante (JPG/PNG)</label>
+                        <?php if (!empty($pasante['foto'])): ?>
+                            <div style="margin-bottom: 8px;">
+                                <img src="<?= APP_ROOT . htmlspecialchars($pasante['foto']) ?>" alt="Foto actual" style="width: 90px; height: 90px; object-fit: cover; border-radius: 50%; border: 2px solid var(--border-color);">
+                            </div>
+                        <?php endif; ?>
+                        <input type="file" id="foto" name="foto" class="form-control" accept=".jpg,.jpeg,.png">
+                        <small style="color: var(--text-muted);">Si no eliges archivo, se conserva la actual.</small>
                     </div>
 
                     <div class="form-group">

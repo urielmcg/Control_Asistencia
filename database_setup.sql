@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS pasantes (
     semestre VARCHAR(50),
     fecha_nacimiento DATE NULL,
     direccion TEXT NULL,
+    foto VARCHAR(255) NULL,
     estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVO',
     fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_pasantes_usuario

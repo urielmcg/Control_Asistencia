@@ -111,9 +111,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <button type="button" class="btn btn-primary" onclick="window.print()">
                         <i class="fa-solid fa-print"></i> Imprimir Carnet
                     </button>
-                    <button type="button" class="btn btn-success" id="btnDescargarQR" onclick="descargarCodigoQR()">
-                        <i class="fa-solid fa-download"></i> Descargar QR (PNG)
-                    </button>
                     <a href="../asistencias/registrar_qr.php" class="btn btn-danger">
                         <i class="fa-solid fa-expand"></i> Probar en Asistencia QR
                     </a>
@@ -142,13 +139,17 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
                     <!-- Cuerpo de la Credencial -->
                     <div class="carnet-body">
-                        <!-- Avatar / Foto -->
+                        <!-- Foto del pasante -->
                         <div class="carnet-avatar-wrapper">
-                            <div class="carnet-avatar">
-                                <span><?= htmlspecialchars($iniciales) ?></span>
-                            </div>
+                            <?php if (!empty($pasante['foto'])): ?>
+                                <img src="<?= APP_ROOT . htmlspecialchars($pasante['foto']) ?>" alt="Foto del pasante" style="width: 110px; height: 110px; object-fit: cover; border-radius: 50%; border: 3px solid var(--primary-blue);">
+                            <?php else: ?>
+                                <div class="carnet-avatar">
+                                    <span><?= htmlspecialchars($iniciales) ?></span>
+                                </div>
+                            <?php endif; ?>
                             <div class="carnet-badge-status <?= $pasante['estado'] === 'ACTIVO' ? 'status-activo' : 'status-inactivo' ?>">
-                                <i class="fa-solid <?= $pasante['estado'] === 'ACTIVO' ? 'fa-check' : 'fa-clock' ?>"></i>
+                                <i class="fa-solid fa-check"></i>
                                 <?= htmlspecialchars($pasante['estado']) ?>
                             </div>
                         </div>
@@ -182,19 +183,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 </div>
                             <?php endif; ?>
                         </div>
-
-                        <!-- Contenedor QR -->
-                        <div class="carnet-qr-container">
-                            <div id="qrcodeCarnet" class="qr-box"></div>
-                            <div class="qr-code-text">
-                                <?= htmlspecialchars($qrData) ?>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Pie de la Credencial -->
                     <div class="carnet-footer">
-                        <p>Válido para marcación de asistencias y control de acceso</p>
+                        <p>Credencial de identificación del pasante</p>
                         <small>CCDB &bull; Sistema Integrado de Gestión</small>
                     </div>
                 </div>
@@ -254,9 +247,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
     <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
 </div>
-
-<!-- Biblioteca qrcode.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
 /* Estilos Específicos para la Credencial Don Bosco */
@@ -573,48 +563,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    <?php if ($pasante): ?>
-        // Generar Código QR nítido
-        const qrContainer = document.getElementById('qrcodeCarnet');
-        if (qrContainer) {
-            new QRCode(qrContainer, {
-                text: "<?= $qrData ?>",
-                width: 128,
-                height: 128,
-                colorDark: "#0d3b66",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
-        }
-    <?php endif; ?>
-});
-
-// Descargar QR como Imagen PNG
-function descargarCodigoQR() {
-    const qrImg = document.querySelector('#qrcodeCarnet img');
-    const qrCanvas = document.querySelector('#qrcodeCarnet canvas');
-
-    let imageURI = null;
-    if (qrCanvas) {
-        imageURI = qrCanvas.toDataURL("image/png");
-    } else if (qrImg && qrImg.src) {
-        imageURI = qrImg.src;
-    }
-
-    if (!imageURI) {
-        alert('No se pudo generar la imagen del código QR.');
-        return;
-    }
-
-    const downloadLink = document.createElement('a');
-    downloadLink.href = imageURI;
-    downloadLink.download = 'QR_Pasante_<?= $pasante ? preg_replace('/[^0-9A-Za-z]/', '', $pasante['ci']) : 'CCDB' ?>.png';
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
-}
-
 // Copiar código al portapapeles
 function copiarAlPortapapeles() {
     const input = document.getElementById('copiarCodigoInput');
