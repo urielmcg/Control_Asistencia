@@ -688,4 +688,71 @@ body {
     border: 1px solid currentColor !important;
     background: #ffffff !important;
   }
+
+  /* Print-only report table (hidden on screen, hidden screen cards in print) */
+  .content-body:has(> .print-report) > .card {
+    display: none !important;
+  }
+
+  .print-report {
+    display: block !important;
+  }
+
+  .print-report-head {
+    text-align: center !important;
+    margin-bottom: 12px !important;
+  }
+
+  .print-report-head h2 {
+    font-family: Georgia, "Times New Roman", serif !important;
+    font-size: 16pt !important;
+    color: #0d3b66 !important;
+    margin: 0 0 4px 0 !important;
+  }
+
+  .print-report-head p {
+    font-size: 9pt !important;
+    color: #334155 !important;
+    margin: 2px 0 !important;
+  }
+
+  .print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 9.5pt !important;
+  }
+
+  .print-table th {
+    background: #0d3b66 !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-align: left !important;
+    padding: 7px 8px !important;
+    border: 1px solid #0d3b66 !important;
+  }
+
+  .print-table td {
+    padding: 6px 8px !important;
+    border: 1px solid #94a3b8 !important;
+    vertical-align: top !important;
+  }
+
+  .print-table tbody tr:nth-child(even) td {
+    background: #f1f5f9 !important;
+  }
+
+  .print-table small {
+    font-size: 8pt !important;
+    color: #475569 !important;
+  }
+
+  .print-foot {
+    text-align: center !important;
+    font-size: 8pt !important;
+    font-style: italic !important;
+    color: #64748b !important;
+    margin-top: 10px !important;
+  }
 }
+. p r i n t - r e p o r t   {   d i s p l a y :   n o n e ;   }  
+ 

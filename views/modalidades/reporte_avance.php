@@ -129,6 +129,46 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <?php endif; ?>
             </div>
         <?php endforeach; ?>
+
+        <!-- Versión tabular solo para impresión/PDF (invisible en pantalla) -->
+        <div class="print-report">
+            <div class="print-report-head">
+                <h2>Informe de Avance y Estado de Horas Reglamentarias</h2>
+                <p>Documento oficial de control de cumplimiento con miras a la emisión de certificados CCDB.</p>
+                <p><strong>Fecha del reporte:</strong> <?= date('d/m/Y') ?></p>
+            </div>
+            <table class="print-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Carrera / Institución</th>
+                        <th>Modalidad</th>
+                        <th>Tiempo Cumplido</th>
+                        <th>Tiempo Faltante</th>
+                        <th>Cumplimiento</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($reportes as $rep): ?>
+                        <tr>
+                            <td>
+                                <strong><?= htmlspecialchars($rep['nombres'] . ' ' . $rep['apellidos']) ?></strong><br>
+                                <small>CI: <?= htmlspecialchars($rep['ci']) ?></small>
+                            </td>
+                            <td>
+                                <?= htmlspecialchars($rep['carrera']) ?><br>
+                                <small><?= htmlspecialchars($rep['institucion']) ?></small>
+                            </td>
+                            <td><?= htmlspecialchars($rep['modalidad']) ?></td>
+                            <td><?= $rep['horas_acumuladas'] ?> hrs</td>
+                            <td><?= $rep['horas_faltantes'] ?> hrs</td>
+                            <td><?= $rep['porcentaje_completado'] ?>%</td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <p class="print-foot">Documento generado por el Sistema de Control y Seguimiento de Pasantes CCDB.</p>
+        </div>
     </main>
 
     <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
