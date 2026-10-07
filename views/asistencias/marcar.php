@@ -171,6 +171,7 @@ $qrErrors = [
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Marcar asistencia - CCDB</title>
+<link rel="icon" type="image/png" href="../../assets/img/ccdb/icono_ccdb.png">
 <style>
   * { box-sizing: border-box; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d3b66; margin: 0; padding: 16px; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
@@ -190,6 +191,7 @@ $qrErrors = [
 </head>
 <body>
 <div class="card">
+  <img src="../../assets/img/ccdb/icono_ccdb.png" alt="CCDB" style="width: 56px; height: 56px; border-radius: 12px; margin-bottom: 8px;">
   <div class="logo">CENTRO CULTURAL DON BOSCO</div>
   <div class="sub">Marcación de asistencia &bull; <?= date('d/m/Y') ?></div>
 

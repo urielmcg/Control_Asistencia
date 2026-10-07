@@ -130,7 +130,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <div class="carnet-header-bg"></div>
                         <div class="carnet-header-content">
                             <div class="carnet-logo-box">
-                                <img src="<?= APP_ROOT ?>assets/img/logo_donbosco.svg" alt="Logo Don Bosco" class="carnet-logo">
+                                <img src="<?= APP_ROOT ?>assets/img/ccdb/icono_ccdb_sin_fondo.png" alt="Logo Don Bosco" class="carnet-logo">
                             </div>
                             <div class="carnet-inst-text">
                                 <h3>CENTRO CULTURAL DON BOSCO</h3>

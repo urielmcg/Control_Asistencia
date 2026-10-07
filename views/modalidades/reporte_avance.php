@@ -94,11 +94,14 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     <main class="content-body">
         <div class="card" style="margin-bottom: 20px;">
             <div class="card-header-flex">
-                <div>
-                    <h3 class="card-title">Informe de Avance y Estado de Horas Reglamentarias</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
-                        Documento oficial de control de cumplimiento con miras a la emisión de certificados CCDB.
-                    </p>
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <img src="<?= APP_ROOT ?>assets/img/ccdb/banner1_ccdb_sin_fondo.png" alt="CCDB" style="height: 56px;">
+                    <div>
+                        <h3 class="card-title">Informe de Avance y Estado de Horas Reglamentarias</h3>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+                            Documento oficial de control de cumplimiento con miras a la emisión de certificados CCDB.
+                        </p>
+                    </div>
                 </div>
                 <div style="display: flex; gap: 10px;">
                     <button onclick="window.print()" class="btn btn-primary">
@@ -239,6 +242,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <!-- Versión tabular solo para impresión/PDF (invisible en pantalla) -->
         <div class="print-report">
             <div class="print-report-head">
+                <img src="<?= APP_ROOT ?>assets/img/ccdb/banner1_ccdb_sin_fondo.png" alt="CCDB" style="height: 64px; margin-bottom: 6px;">
                 <h2>Informe de Avance y Estado de Horas Reglamentarias</h2>
                 <p>Documento oficial de control de cumplimiento con miras a la emisión de certificados CCDB.</p>
                 <p><strong>Fecha del reporte:</strong> <?= date('d/m/Y') ?></p>

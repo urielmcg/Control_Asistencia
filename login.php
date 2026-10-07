@@ -55,12 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/login.css">
+    <link rel="icon" type="image/png" href="assets/img/ccdb/icono_ccdb.png">
 </head>
 <body class="login-body">
     <div class="login-wrapper">
         <div class="login-card">
             <!-- Logotipo Don Bosco -->
-            <img src="assets/img/logo_donbosco.svg" alt="Logotipo Don Bosco CCDB" class="login-logo">
+            <img src="assets/img/ccdb/banner1_ccdb.png" alt="Logotipo Don Bosco CCDB" class="login-logo">
             
             <div class="login-header">
                 <h1>SISTEMA WEB CCDB</h1>

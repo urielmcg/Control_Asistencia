@@ -22,5 +22,6 @@ $activeMenu = $activeMenu ?? 'dashboard';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Estilos del Sistema -->
     <link rel="stylesheet" href="<?= APP_ROOT ?>assets/css/style.css">
+    <link rel="icon" type="image/png" href="<?= APP_ROOT ?>assets/img/ccdb/icono_ccdb.png">
 </head>
 <body>

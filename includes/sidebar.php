@@ -8,7 +8,7 @@ $isStaff = Auth::isStaff();
 ?>
 <aside class="sidebar">
     <a href="<?= APP_ROOT ?>index.php" class="sidebar-brand">
-        <img src="<?= APP_ROOT ?>assets/img/logo_donbosco.svg" alt="Logo Don Bosco CCDB">
+        <img src="<?= APP_ROOT ?>assets/img/ccdb/icono_ccdb.png" alt="Logo Don Bosco CCDB" style="border-radius: 10px;">
         <div class="sidebar-brand-text">
             <h2>Don Bosco</h2>
             <span>CCDB Panel</span>
