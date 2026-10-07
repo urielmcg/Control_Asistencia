@@ -51,16 +51,16 @@ $sanciones = $db->query("SELECT s.*, ts.nombre AS tipo_sancion, p.nombres, p.ape
                          FROM sanciones s
                          INNER JOIN tipos_sancion ts ON s.id_tipo_sancion = ts.id_tipo_sancion
                          INNER JOIN procesos pr ON s.id_proceso = pr.id_proceso
-                         INNER JOIN pasantes p ON pr.id_pasante = p.id_pasante
-                         INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                         LEFT JOIN pasantes p ON pr.id_pasante = p.id_pasante
+                         LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
                          INNER JOIN usuarios u ON s.registrado_por = u.id_usuario
                          ORDER BY s.fecha DESC, s.id_sancion DESC")->fetchAll();
 
-// Procesos en curso para el selector
-$procesos = $db->query("SELECT pr.id_proceso, p.nombres, p.apellidos, p.ci, m.nombre AS modalidad
+// Procesos en curso para el selector (puros, TD y PG, vinculados o no)
+$procesos = $db->query("SELECT pr.id_proceso, pr.horas_requeridas, p.nombres, p.apellidos, p.ci, COALESCE(m.nombre, 'Pasantía') AS modalidad
                         FROM procesos pr
-                        INNER JOIN pasantes p ON pr.id_pasante = p.id_pasante
-                        INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                        LEFT JOIN pasantes p ON pr.id_pasante = p.id_pasante
+                        LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
                         WHERE pr.estado = 'EN_CURSO'
                         ORDER BY p.apellidos ASC")->fetchAll();
 
@@ -104,7 +104,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <option value="">-- Seleccionar Pasante --</option>
                             <?php foreach ($procesos as $proc): ?>
                                 <option value="<?= $proc['id_proceso'] ?>">
-                                    <?= htmlspecialchars($proc['apellidos'] . ' ' . $proc['nombres']) ?> (CI: <?= htmlspecialchars($proc['ci']) ?>) - <?= htmlspecialchars($proc['modalidad']) ?>
+                                    <?= !empty($proc['id_proceso']) && !empty($proc['ci']) ? htmlspecialchars(($proc['apellidos'] ?? '') . ' ' . ($proc['nombres'] ?? '') . ' (CI: ' . $proc['ci'] . ') - ') : '' ?><?= htmlspecialchars($proc['modalidad']) ?> #<?= $proc['id_proceso'] ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -177,8 +177,13 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     <tr>
                                         <td><strong><?= date('d/m/Y', strtotime($s['fecha'])) ?></strong></td>
                                         <td>
-                                            <div style="font-weight: 700; color: var(--primary-blue);"><?= htmlspecialchars($s['nombres'] . ' ' . $s['apellidos']) ?></div>
-                                            <small style="color: var(--text-muted);">CI: <?= htmlspecialchars($s['ci']) ?></small>
+                                            <?php if (!empty($s['ci'])): ?>
+                                                <div style="font-weight: 700; color: var(--primary-blue);"><?= htmlspecialchars(($s['nombres'] ?? '') . ' ' . ($s['apellidos'] ?? '')) ?></div>
+                                                <small style="color: var(--text-muted);">CI: <?= htmlspecialchars($s['ci']) ?></small>
+                                            <?php else: ?>
+                                                <div style="font-weight: 700; color: var(--primary-blue);"><?= htmlspecialchars($s['modalidad'] ?? 'Modalidad') ?> #<?= $s['id_proceso'] ?></div>
+                                                <small style="color: var(--text-muted);">Registro independiente</small>
+                                            <?php endif; ?>
                                         </td>
                                         <td>
                                             <span class="badge badge-warning"><?= htmlspecialchars($s['tipo_sancion']) ?></span>

@@ -353,6 +353,33 @@ INSERT IGNORE INTO turnos (id_turno, nombre, hora_inicio, hora_fin) VALUES
 (1, 'Mañana', '09:00:00', '12:00:00'),
 (2, 'Tarde', '15:00:00', '18:00:00');
 
+-- 19. TABLA: SOLICITUDES DE MODALIDAD (datos de carta del postulante)
+CREATE TABLE IF NOT EXISTS solicitudes_modalidad (
+    id_solicitud INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    id_proceso INT UNSIGNED NOT NULL UNIQUE,
+    id_usuario INT UNSIGNED NULL,
+    postulante VARCHAR(150) NOT NULL,
+    ci VARCHAR(30) NULL,
+    universidad VARCHAR(150) NOT NULL,
+    carrera VARCHAR(150) NOT NULL,
+    meses_proyectados INT UNSIGNED NOT NULL,
+    motivacion TEXT NOT NULL,
+    compromiso TEXT NOT NULL,
+    idea_tema VARCHAR(255) NULL,
+    descripcion TEXT NULL,
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_sol_proceso
+        FOREIGN KEY (id_proceso)
+        REFERENCES procesos(id_proceso)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_sol_usuario
+        FOREIGN KEY (id_usuario)
+        REFERENCES usuarios(id_usuario)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+) ENGINE=InnoDB;
+
 -- ============================================================
 -- ÍNDICES DE RENDIMIENTO
 -- ============================================================

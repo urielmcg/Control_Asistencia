@@ -133,25 +133,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 $id_pasante = (int)$db->lastInsertId();
 
-                // Initial process: linked modality or pure internship track (hours only)
-                $horasBase = 1000;
-                if ($id_modalidad > 0) {
-                    $stmtMod = $db->prepare("SELECT horas_requeridas_base FROM modalidades WHERE id_modalidad = :id AND estado = 1");
-                    $stmtMod->execute([':id' => $id_modalidad]);
-                    $mod = $stmtMod->fetch();
-                    if (!$mod) {
-                        throw new Exception('Modalidad solicitada inválida.');
-                    }
-                    $horasBase = (int)$mod['horas_requeridas_base'];
-                }
+                // Pure internship track (hours only, no graduation modality)
                 $stmtProceso = $db->prepare("INSERT INTO procesos (id_pasante, id_institucion, id_modalidad, fecha_inicio, fecha_fin, horas_requeridas, estado, observacion)
-                                             VALUES (:id_pasante, 4, :id_modalidad, :ini, :fin, :horas, 'EN_CURSO', 'Asignación inicial al registrar pasante')");
+                                             VALUES (:id_pasante, 4, NULL, :ini, :fin, 1000, 'EN_CURSO', 'Pasantía: cumplimiento de horas')");
                 $stmtProceso->execute([
                     ':id_pasante'  => $id_pasante,
-                    ':id_modalidad'=> $id_modalidad > 0 ? $id_modalidad : null,
                     ':ini'         => $fecha_inicio,
                     ':fin'         => $fecha_fin,
-                    ':horas'       => $horasBase,
                 ]);
 
                 // Store documents on disk and register them
@@ -202,9 +190,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-
-// Cargar modalidades para el formulario
-$modalidades = $db->query("SELECT id_modalidad, nombre, horas_requeridas_base FROM modalidades WHERE estado = 1")->fetchAll();
 
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
@@ -289,7 +274,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </div>
 
                 <h4 style="font-size: 0.95rem; color: var(--primary-blue); border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 20px; margin-bottom: 16px;">
-                    3. Procedencia Académica y Modalidad
+                    3. Procedencia Académica
                 </h4>
                 <div class="form-grid">
                     <div class="form-group">
@@ -309,17 +294,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <option value="">-- Seleccione primero una universidad --</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="id_modalidad">Modalidad solicitada</label>
-                        <select id="id_modalidad" name="id_modalidad" class="form-control">
-                            <option value="0">Solo pasantía (horas, sin modalidad)</option>
-                            <?php foreach ($modalidades as $m): ?>
-                                <option value="<?= $m['id_modalidad'] ?>" <?= (isset($_POST['id_modalidad']) && $_POST['id_modalidad'] == $m['id_modalidad']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($m['nombre']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                </div>
+
+                <h4 style="font-size: 0.95rem; color: var(--primary-blue); border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 20px; margin-bottom: 16px;">
+                    4. Periodo de pasantía (solo horas, sin modalidad)
+                </h4>
+                <div class="form-grid">
                     <div class="form-group">
                         <label for="fecha_inicio">Inicio de pasantía *</label>
                         <input type="date" id="fecha_inicio" name="fecha_inicio" class="form-control" required value="<?= htmlspecialchars($_POST['fecha_inicio'] ?? date('Y-m-d')) ?>">

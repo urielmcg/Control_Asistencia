@@ -1,84 +1,119 @@
 <?php
 /**
- * Asignar Modalidad a Pasante creando un nuevo Proceso
+ * Solicitud de Modalidad de Titulación (Proyecto de Grado o Trabajo Dirigido)
+ * Standalone record with letter data, optional access account.
  */
 require_once __DIR__ . '/../../config/auth.php';
 Auth::requireStaff();
 
-$pageTitle = 'Asignar Modalidad';
+$pageTitle = 'Solicitud de Modalidad';
 $activeMenu = 'modalidades';
 $db = Database::getConnection();
 
 $error = '';
-$prePasanteId = (int)($_GET['id_pasante'] ?? 0);
 $preModId = (int)($_GET['id_modalidad'] ?? 0);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id_pasante = (int)($_POST['id_pasante'] ?? 0);
     $id_modalidad = (int)($_POST['id_modalidad'] ?? 0);
-    $id_institucion = (int)($_POST['id_institucion'] ?? 4); // Default CCDB
-    $fecha_inicio = trim($_POST['fecha_inicio'] ?? date('Y-m-d'));
-    $fecha_fin = !empty($_POST['fecha_fin']) ? trim($_POST['fecha_fin']) : null;
+    $postulante = trim($_POST['postulante'] ?? '');
+    $ci = trim($_POST['ci'] ?? '');
     $horas_requeridas = trim($_POST['horas_requeridas'] ?? '');
-    $observacion = trim($_POST['observacion'] ?? '');
+    $universidad = trim($_POST['universidad'] ?? '');
+    $carrera = trim($_POST['carrera'] ?? '');
     $id_turno = (int)($_POST['id_turno'] ?? 0);
-    $id_tutor = (int)($_POST['id_tutor'] ?? 0);
+    $meses = (int)($_POST['meses'] ?? 0);
+    $motivacion = trim($_POST['motivacion'] ?? '');
+    $compromiso = trim($_POST['compromiso'] ?? '');
+    $idea = trim($_POST['idea_tema'] ?? '');
+    $descripcion = trim($_POST['descripcion'] ?? '');
+    $usuario_acceso = trim($_POST['usuario_acceso'] ?? '');
+    $password = $_POST['password'] ?? '';
 
-    $stmtMod = $db->prepare("SELECT nombre FROM modalidades WHERE id_modalidad = :id");
+    $stmtMod = $db->prepare("SELECT nombre FROM modalidades WHERE id_modalidad = :id AND estado = 1");
     $stmtMod->execute([':id' => $id_modalidad]);
     $modNombre = $stmtMod->fetchColumn();
     $esPG = ($modNombre === 'Proyecto de Grado');
 
-    if ($id_modalidad <= 0) {
-        $error = 'Por favor seleccione la modalidad.';
+    if ($id_modalidad <= 0 || !$modNombre) {
+        $error = 'Seleccione la modalidad (Proyecto de Grado o Trabajo Dirigido).';
+    } elseif ($postulante === '' || $universidad === '' || $carrera === '' || $id_turno <= 0
+        || $meses <= 0 || $motivacion === '' || $compromiso === '') {
+        $error = 'Por favor complete todos los campos obligatorios (*).';
     } elseif (!$esPG && ($horas_requeridas === '' || (int)$horas_requeridas <= 0)) {
         $error = 'Indique las horas requeridas según facultad (ej. 280, 300, 400, 800, 1000).';
+    } elseif (($usuario_acceso !== '' || $password !== '' || $ci !== '') && ($usuario_acceso === '' || strlen($password) < 8 || $ci === '')) {
+        $error = 'Para crear el acceso complete usuario, contraseña (mínimo 8) y CI.';
     } else {
         try {
-            if ($id_pasante > 0) {
-                $stmtP = $db->prepare("SELECT id_pasante FROM pasantes WHERE id_pasante = :id");
-                $stmtP->execute([':id' => $id_pasante]);
-                if (!$stmtP->fetch()) {
-                    throw new Exception('Pasante seleccionado inválido.');
-                }
-            }
+            $db->beginTransaction();
+
             $stmtTurno = $db->prepare("SELECT id_turno FROM turnos WHERE id_turno = :id AND estado = 1");
             $stmtTurno->execute([':id' => $id_turno]);
-            if ($id_turno > 0 && !$stmtTurno->fetch()) {
-                throw new Exception('Turno seleccionado inválido.');
+            if (!$stmtTurno->fetch()) {
+                throw new Exception('Turno de acompañamiento inválido.');
             }
+
+            // Optional access account for the applicant
+            $id_usuario = null;
+            if ($usuario_acceso !== '') {
+                $stmtU = $db->prepare("SELECT id_usuario FROM usuarios WHERE usuario = :u OR ci = :ci");
+                $stmtU->execute([':u' => $usuario_acceso, ':ci' => $ci]);
+                if ($stmtU->fetch()) {
+                    throw new Exception('El usuario de acceso o el CI ya existen.');
+                }
+                $stmtAcc = $db->prepare("INSERT INTO usuarios (id_rol, usuario, password, nombres, apellidos, ci, correo, estado)
+                                         VALUES (3, :u, :p, :n, '', :ci, NULL, 1)");
+                $stmtAcc->execute([
+                    ':u'  => $usuario_acceso,
+                    ':p'  => password_hash($password, PASSWORD_BCRYPT),
+                    ':n'  => $postulante,
+                    ':ci' => $ci,
+                ]);
+                $id_usuario = (int)$db->lastInsertId();
+            }
+
             $stmt = $db->prepare("INSERT INTO procesos (id_pasante, id_institucion, id_modalidad, id_tutor, id_turno, fecha_inicio, fecha_fin, horas_requeridas, estado, observacion)
-                                  VALUES (:id_pasante, :id_institucion, :id_modalidad, :id_tutor, :id_turno, :fecha_inicio, :fecha_fin, :horas, 'EN_CURSO', :observacion)");
+                                  VALUES (NULL, 4, :id_modalidad, NULL, :id_turno, CURDATE(), DATE_ADD(CURDATE(), INTERVAL :meses MONTH), :horas, 'EN_CURSO', :observacion)");
             $stmt->execute([
-                ':id_pasante'        => $id_pasante > 0 ? $id_pasante : null,
-                ':id_institucion'    => $id_institucion,
-                ':id_modalidad'      => $id_modalidad,
-                ':id_tutor'          => $id_tutor > 0 ? $id_tutor : null,
-                ':id_turno'          => $id_turno > 0 ? $id_turno : null,
-                ':fecha_inicio'      => $fecha_inicio,
-                ':fecha_fin'         => $fecha_fin,
-                ':horas'             => $esPG ? null : (int)$horas_requeridas,
-                ':observacion'       => $observacion ?: null
+                ':id_modalidad' => $id_modalidad,
+                ':id_turno'     => $id_turno,
+                ':meses'        => $meses,
+                ':horas'        => $esPG ? null : (int)$horas_requeridas,
+                ':observacion'  => $descripcion !== '' ? $descripcion : null,
+            ]);
+            $id_proceso = (int)$db->lastInsertId();
+
+            $stmtSol = $db->prepare("INSERT INTO solicitudes_modalidad (id_proceso, id_usuario, postulante, ci, universidad, carrera, meses_proyectados, motivacion, compromiso, idea_tema, descripcion)
+                                     VALUES (:proc, :idu, :post, :ci, :uni, :car, :meses, :mot, :comp, :idea, :desc)");
+            $stmtSol->execute([
+                ':proc'  => $id_proceso,
+                ':idu'   => $id_usuario,
+                ':post'  => $postulante,
+                ':ci'    => $ci !== '' ? $ci : null,
+                ':uni'   => $universidad,
+                ':car'   => $carrera,
+                ':meses' => $meses,
+                ':mot'   => $motivacion,
+                ':comp'  => $compromiso,
+                ':idea'  => $idea !== '' ? $idea : null,
+                ':desc'  => $descripcion !== '' ? $descripcion : null,
             ]);
 
-            $id_proceso = $db->lastInsertId();
-            Auth::logAudit('ASIGNAR_MODALIDAD', 'procesos', $id_proceso, "Registro de modalidad: $modNombre" . ($id_pasante > 0 ? ", Pasante $id_pasante" : " (independiente)"));
+            Auth::logAudit('SOLICITUD_MODALIDAD', 'solicitudes_modalidad', (int)$db->lastInsertId(), "Solicitud $modNombre: $postulante");
+            $db->commit();
 
-            $_SESSION['flash_success'] = 'Modalidad registrada exitosamente.';
-            header("Location: index.php");
+            $_SESSION['flash_success'] = 'Solicitud de modalidad registrada exitosamente.';
+            header('Location: index.php');
             exit;
         } catch (Exception $e) {
-            $error = 'Error al registrar modalidad: ' . $e->getMessage();
+            $db->rollBack();
+            $error = 'Error al registrar solicitud: ' . $e->getMessage();
         }
     }
 }
 
-// Cargar listas
-$pasantes = $db->query("SELECT id_pasante, nombres, apellidos, ci FROM pasantes WHERE estado = 'ACTIVO' ORDER BY apellidos ASC")->fetchAll();
 $modalidades = $db->query("SELECT * FROM modalidades WHERE estado = 1 ORDER BY nombre ASC")->fetchAll();
-$instituciones = $db->query("SELECT id_institucion, nombre FROM instituciones WHERE estado = 1 ORDER BY nombre ASC")->fetchAll();
 $turnos = $db->query("SELECT * FROM turnos WHERE estado = 1 ORDER BY hora_inicio ASC")->fetchAll();
-$tutores = $db->query("SELECT id_tutor, nombre FROM tutores WHERE estado = 'ACTIVO' ORDER BY nombre ASC")->fetchAll();
 
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
@@ -88,18 +123,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     <?php require_once __DIR__ . '/../../includes/navbar.php'; ?>
 
     <main class="content-body">
-        <div class="card" style="max-width: 800px; margin: 0 auto;">
-            <div class="card-header-flex">
-                <div>
-                    <h3 class="card-title">Registrar Modalidad / Apertura de Proceso</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
-                        Registra una modalidad de graduación (Proyecto de Grado o Trabajo Dirigido).
-                        Los pasantes son aparte: puede quedar como registro independiente.
-                    </p>
-                </div>
-                <a href="index.php" class="btn btn-outline">
-                    <i class="fa-solid fa-arrow-left"></i> Volver a Modalidades
-                </a>
+        <p style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Solicitud de modalidades</p>
+        <div class="card" style="max-width: 960px; margin: 0 auto;">
+            <div style="background: #eff6ff; border-left: 4px solid #2563eb; border-radius: 8px; padding: 12px 16px; font-size: 0.85rem; color: #1e40af; margin-bottom: 20px;">
+                Completa por teclado los datos que deben aparecer en la carta solicitada por la institución.
+                El tipo solo puede ser Proyecto de Grado o Trabajo Dirigido. El tutor corresponde al
+                acompañamiento de lunes a viernes con Tutor Interno y apoyo en Servicios y Actualización.
             </div>
 
             <?php if (!empty($error)): ?>
@@ -112,42 +141,23 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <form action="asignar.php" method="POST">
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="id_tutor">Tutor (opcional)</label>
-                        <select name="id_tutor" id="id_tutor" class="form-control">
-                            <option value="0">-- Sin tutor --</option>
-                            <?php foreach ($tutores as $t): ?>
-                                <option value="<?= $t['id_tutor'] ?>"><?= htmlspecialchars($t['nombre']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label for="id_pasante">Vincular Pasante (opcional)</label>
-                        <select name="id_pasante" id="id_pasante" class="form-control">
-                            <option value="0">-- Registro independiente (sin pasante) --</option>
-                            <?php foreach ($pasantes as $p): ?>
-                                <option value="<?= $p['id_pasante'] ?>" <?= ($prePasanteId === (int)$p['id_pasante']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($p['apellidos'] . ' ' . $p['nombres']) ?> (CI: <?= htmlspecialchars($p['ci']) ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="id_modalidad">Modalidad de Titulación / Práctica *</label>
-                        <select name="id_modalidad" id="id_modalidad" class="form-control" required>
-                            <option value="">-- Seleccionar Modalidad --</option>
+                        <label for="id_modalidad">Modalidad elegida *</label>
+                        <select name="id_modalidad" id="id_modalidad" class="form-control" required onchange="toggleHoras(this)">
+                            <option value="">-- Seleccionar --</option>
                             <?php foreach ($modalidades as $m): ?>
-                                <option value="<?= $m['id_modalidad'] ?>" <?= ($preModId === (int)$m['id_modalidad']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($m['nombre']) ?> (Base <?= $m['horas_requeridas_base'] ?> hrs)
+                                <option value="<?= $m['id_modalidad'] ?>" data-nombre="<?= htmlspecialchars($m['nombre']) ?>" <?= ($preModId === (int)$m['id_modalidad']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($m['nombre']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-
                     <div class="form-group">
-                        <label for="horas_requeridas">Horas Requeridas (solo Trabajo Dirigido)</label>
-                        <input type="number" name="horas_requeridas" id="horas_requeridas" class="form-control" value="" min="10" step="10" list="horas_facultad" placeholder="280, 300, 400, 800, 1000">
+                        <label for="postulante">Nombre completo del postulante *</label>
+                        <input type="text" name="postulante" id="postulante" class="form-control" required value="<?= htmlspecialchars($_POST['postulante'] ?? '') ?>">
+                    </div>
+                    <div class="form-group" id="grupoHoras">
+                        <label for="horas_requeridas">Horas requeridas *</label>
+                        <input type="number" name="horas_requeridas" id="horas_requeridas" class="form-control" min="10" step="10" list="horas_facultad" placeholder="280, 300, 400, 800, 1000" value="<?= htmlspecialchars($_POST['horas_requeridas'] ?? '') ?>">
                         <datalist id="horas_facultad">
                             <option value="280"></option>
                             <option value="300"></option>
@@ -155,53 +165,73 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <option value="800"></option>
                             <option value="1000"></option>
                         </datalist>
-                        <small style="color: var(--text-muted);">Proyecto de Grado no lleva horas (se mide en meses).</small>
                     </div>
-
                     <div class="form-group">
-                        <label for="id_institucion">Institución Receptora *</label>
-                        <select name="id_institucion" id="id_institucion" class="form-control" required>
-                            <?php foreach ($instituciones as $inst): ?>
-                                <option value="<?= $inst['id_institucion'] ?>" <?= ($inst['id_institucion'] == 4) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($inst['nombre']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <label for="ci">Documento / CI *</label>
+                        <input type="text" name="ci" id="ci" class="form-control" required value="<?= htmlspecialchars($_POST['ci'] ?? '') ?>">
                     </div>
-
                     <div class="form-group">
-                        <label for="fecha_inicio">Fecha de Inicio *</label>
-                        <input type="date" name="fecha_inicio" id="fecha_inicio" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                        <label for="universidad">Universidad o instituto *</label>
+                        <input type="text" name="universidad" id="universidad" class="form-control" required value="<?= htmlspecialchars($_POST['universidad'] ?? '') ?>">
                     </div>
-
                     <div class="form-group">
-                        <label for="fecha_fin">Fecha de Fin Estimada</label>
-                        <input type="date" name="fecha_fin" id="fecha_fin" class="form-control" value="<?= date('Y-m-d', strtotime('+6 months')) ?>">
+                        <label for="carrera">Carrera *</label>
+                        <input type="text" name="carrera" id="carrera" class="form-control" required value="<?= htmlspecialchars($_POST['carrera'] ?? '') ?>">
                     </div>
-
                     <div class="form-group">
-                        <label for="id_turno">Turno</label>
-                        <select name="id_turno" id="id_turno" class="form-control">
-                            <option value="0">-- Sin turno --</option>
+                        <label for="id_turno">Turno de acompañamiento *</label>
+                        <select name="id_turno" id="id_turno" class="form-control" required>
+                            <option value="0">Seleccionar turno</option>
                             <?php foreach ($turnos as $t): ?>
                                 <option value="<?= $t['id_turno'] ?>">
                                     <?= htmlspecialchars($t['nombre']) ?> · <?= htmlspecialchars(substr($t['hora_inicio'], 0, 5)) ?>–<?= htmlspecialchars(substr($t['hora_fin'], 0, 5)) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <small style="color: var(--text-muted);"><a href="turnos.php">Administrar turnos</a></small>
                     </div>
+                    <div class="form-group">
+                        <label for="meses">Tiempo de presencia proyectado (meses) *</label>
+                        <input type="number" name="meses" id="meses" class="form-control" required min="1" max="24" value="<?= htmlspecialchars($_POST['meses'] ?? '6') ?>">
+                        <small style="color: var(--text-muted);">Calcula el tiempo previsto para concluir la modalidad según el periodo de titulación.</small>
+                    </div>
+                </div>
 
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label for="observacion">Observaciones o Términos del Convenio</label>
-                        <textarea name="observacion" id="observacion" rows="3" class="form-control" placeholder="Detalles adicionales, proyecto asignado, tutor guía..."></textarea>
+                <div class="form-group" style="margin-top: 16px;">
+                    <label for="motivacion">Motivación personal *</label>
+                    <textarea name="motivacion" id="motivacion" rows="3" class="form-control" required><?= htmlspecialchars($_POST['motivacion'] ?? '') ?></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="compromiso">Compromiso que asume *</label>
+                    <textarea name="compromiso" id="compromiso" rows="3" class="form-control" required><?= htmlspecialchars($_POST['compromiso'] ?? '') ?></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="idea_tema">Idea de tema tentativa (opcional)</label>
+                    <input type="text" name="idea_tema" id="idea_tema" class="form-control" value="<?= htmlspecialchars($_POST['idea_tema'] ?? '') ?>">
+                </div>
+                <div class="form-group">
+                    <label for="descripcion">Descripción / observaciones adicionales</label>
+                    <textarea name="descripcion" id="descripcion" rows="3" class="form-control"><?= htmlspecialchars($_POST['descripcion'] ?? '') ?></textarea>
+                </div>
+
+                <h4 style="font-size: 0.95rem; color: var(--primary-blue); border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 20px; margin-bottom: 16px;">
+                    Acceso al sistema (opcional)
+                </h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="usuario_acceso">Usuario de acceso</label>
+                        <input type="text" name="usuario_acceso" id="usuario_acceso" class="form-control" value="<?= htmlspecialchars($_POST['usuario_acceso'] ?? '') ?>">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Contraseña</label>
+                        <input type="password" name="password" id="password" class="form-control" minlength="8">
+                        <small style="color: var(--text-muted);">Mínimo 8 caracteres. Usa el mismo CI de arriba.</small>
                     </div>
                 </div>
 
                 <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
                     <a href="index.php" class="btn btn-outline">Cancelar</a>
                     <button type="submit" class="btn btn-danger">
-                        <i class="fa-solid fa-check"></i> Asignar Proceso
+                        <i class="fa-solid fa-check"></i> Registrar Solicitud
                     </button>
                 </div>
             </form>
@@ -210,3 +240,16 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
     <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
 </div>
+
+<script>
+function toggleHoras(sel) {
+    const nombre = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].dataset.nombre : '';
+    const grupo = document.getElementById('grupoHoras');
+    const input = document.getElementById('horas_requeridas');
+    const esPG = (nombre === 'Proyecto de Grado');
+    grupo.style.opacity = esPG ? '0.5' : '1';
+    input.required = !esPG;
+    if (esPG) { input.value = ''; }
+}
+document.addEventListener('DOMContentLoaded', () => toggleHoras(document.getElementById('id_modalidad')));
+</script>
