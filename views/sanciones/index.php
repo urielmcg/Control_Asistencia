@@ -140,13 +140,24 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
         <?php endif; ?>
 
-        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
-            <!-- Formulario Aplicar Sanción -->
-            <div class="card">
-                <h3 class="card-title" style="margin-bottom: 16px;">
-                    <i class="fa-solid fa-triangle-exclamation" style="color: var(--primary-red); margin-right: 6px;"></i>
-                    Registrar Sanción / Descuento
-                </h3>
+        <div style="margin-bottom: 20px;">
+            <button type="button" class="btn btn-danger" onclick="document.getElementById('modalSancion').style.display='flex'">
+                <i class="fa-solid fa-gavel"></i> Registrar Sanción
+            </button>
+        </div>
+
+        <!-- Modal Registrar Sanción -->
+        <div id="modalSancion" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); z-index: 1000; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 40px 16px;" onclick="if (event.target === this) this.style.display='none'">
+            <div class="card" style="max-width: 560px; width: 100%; margin: 0;">
+                <div class="card-header-flex">
+                    <h3 class="card-title">
+                        <i class="fa-solid fa-triangle-exclamation" style="color: var(--primary-red); margin-right: 6px;"></i>
+                        Registrar Sanción / Descuento
+                    </h3>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('modalSancion').style.display='none'">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
                 <form method="POST" action="index.php">
                     <input type="hidden" name="action" value="registrar">
 
@@ -203,13 +214,16 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </button>
                 </form>
             </div>
+        </div>
 
-            <!-- Listado Histórico de Sanciones -->
-            <div class="card">
-                <div class="card-header-flex">
+        <!-- Listado Histórico de Sanciones -->
+        <div class="card">
+            <div class="card-header-flex">
+                <div>
                     <h3 class="card-title">Registro de Sanciones Aplicadas</h3>
-                    <span class="badge badge-danger"><?= count($sanciones) ?> registros</span>
                 </div>
+                <span class="badge badge-danger"><?= count($sanciones) ?> registros</span>
+            </div>
 
                 <div style="display: flex; gap: 10px; margin-bottom: 16px;">
                     <a href="index.php?f=activas" class="btn btn-sm <?= $filtroS === 'activas' ? 'btn-primary' : 'btn-outline' ?>">
