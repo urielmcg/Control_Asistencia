@@ -27,6 +27,30 @@ if (!$sol) {
     exit;
 }
 
+// Procesos linked to a pasante may have no solicitud row yet:
+// prefill letter data from the pasante so the form is never empty
+if (empty($sol['id_solicitud']) && !empty($sol['id_pasante'])) {
+    $stmtPre = $db->prepare("SELECT p.nombres, p.apellidos, i.nombre AS institucion, c.nombre AS carrera
+                             FROM pasantes p
+                             LEFT JOIN instituciones i ON p.id_universidad = i.id_institucion
+                             LEFT JOIN carreras c ON p.id_carrera = c.id_carrera
+                             WHERE p.id_pasante = :id LIMIT 1");
+    $stmtPre->execute([':id' => $sol['id_pasante']]);
+    if ($pre = $stmtPre->fetch()) {
+        $sol['postulante'] = trim(($pre['nombres'] ?? '') . ' ' . ($pre['apellidos'] ?? ''));
+        $sol['universidad'] = $pre['institucion'] ?? '';
+        $sol['carrera'] = $pre['carrera'] ?? '';
+    }
+    if (!empty($sol['fecha_inicio']) && !empty($sol['fecha_fin'])) {
+        $dd1 = new DateTime($sol['fecha_inicio']);
+        $dd2 = new DateTime($sol['fecha_fin']);
+        if ($dd2 > $dd1) {
+            $ddiff = $dd1->diff($dd2);
+            $sol['meses_proyectados'] = max(1, $ddiff->y * 12 + $ddiff->m);
+        }
+    }
+}
+
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -92,6 +116,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':idea'  => $idea !== '' ? $idea : null,
                     ':desc'  => $descripcion !== '' ? $descripcion : null,
                     ':id'    => $id_proceso,
+                ]);
+            } else {
+                $stmtS = $db->prepare("INSERT INTO solicitudes_modalidad (id_proceso, postulante, universidad, carrera, meses_proyectados, motivacion, compromiso, idea_tema, descripcion)
+                                       VALUES (:id, :post, :uni, :car, :meses, :mot, :comp, :idea, :desc)");
+                $stmtS->execute([
+                    ':id'    => $id_proceso,
+                    ':post'  => $postulante,
+                    ':uni'   => $universidad,
+                    ':car'   => $carrera,
+                    ':meses' => $meses,
+                    ':mot'   => $motivacion,
+                    ':comp'  => $compromiso,
+                    ':idea'  => $idea !== '' ? $idea : null,
+                    ':desc'  => $descripcion !== '' ? $descripcion : null,
                 ]);
             }
             Auth::logAudit('EDITAR_SOLICITUD', 'procesos', $id_proceso, "Solicitud actualizada: $modNombre - $postulante");
