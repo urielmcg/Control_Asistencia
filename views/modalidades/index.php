@@ -59,8 +59,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </p>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <a href="asignar.php" class="btn btn-danger">
-                        <i class="fa-solid fa-plus-circle"></i> Asignar Modalidad a Pasante
+                    <a href="../tutores/nuevo.php" class="btn btn-danger">
+                        <i class="fa-solid fa-user-tie"></i> Asignar Tutor a Modalidad
                     </a>
                 </div>
             </div>
