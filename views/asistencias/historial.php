@@ -30,10 +30,23 @@ $sql = "SELECT a.*, p.nombres, p.apellidos, p.ci, inst.nombre AS institucion, m.
         INNER JOIN procesos pr ON a.id_proceso = pr.id_proceso
         INNER JOIN pasantes p ON pr.id_pasante = p.id_pasante
         INNER JOIN instituciones inst ON pr.id_institucion = inst.id_institucion
-        INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+        LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
         WHERE 1=1 ";
 
 $params = [];
+
+// Track tabs: pure interns, Trabajo Dirigido, Proyecto de Grado
+$tabH = $_GET['tab'] ?? 'pasantes';
+if (!in_array($tabH, ['pasantes', 'td', 'pg'], true)) {
+    $tabH = 'pasantes';
+}
+if ($tabH === 'td') {
+    $sql .= " AND m.nombre = 'Trabajo Dirigido' ";
+} elseif ($tabH === 'pg') {
+    $sql .= " AND m.nombre = 'Proyecto de Grado' ";
+} else {
+    $sql .= " AND m.nombre IS NULL ";
+}
 
 if ($id_pasante > 0) {
     $sql .= " AND p.id_pasante = :id_pasante ";
@@ -81,8 +94,17 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <?php endif; ?>
             </div>
 
+            <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                <?php foreach (['pasantes' => 'Pasantes', 'td' => 'Trabajo Dirigido', 'pg' => 'Proyecto de Grado'] as $key => $label): ?>
+                    <a href="historial.php?tab=<?= $key ?>" class="btn btn-sm <?= $tabH === $key ? 'btn-primary' : 'btn-outline' ?>">
+                        <?= $label ?>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+
             <!-- Filtros -->
             <form method="GET" action="historial.php" style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; background: #f8fafc; padding: 16px; border-radius: 8px;">
+                <input type="hidden" name="tab" value="<?= htmlspecialchars($tabH) ?>">
                 <?php if (!$esPropio): ?>
                 <div style="flex: 1; min-width: 220px;">
                     <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Pasante:</label>
@@ -112,7 +134,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <i class="fa-solid fa-filter"></i> Filtrar
                     </button>
                     <?php if ($id_pasante > 0 || !empty($fecha_desde) || !empty($fecha_hasta)): ?>
-                        <a href="historial.php" class="btn btn-outline">Limpiar</a>
+                        <a href="historial.php?tab=<?= htmlspecialchars($tabH) ?>" class="btn btn-outline">Limpiar</a>
                     <?php endif; ?>
                 </div>
             </form>

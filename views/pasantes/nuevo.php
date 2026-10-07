@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($ci) || empty($nombres) || $id_universidad <= 0 || $id_carrera <= 0
         || empty($usuario_acceso) || empty($password) || empty($correo) || empty($fecha_nacimiento)
-        || $id_modalidad <= 0 || empty($fecha_inicio) || empty($fecha_fin)) {
+        || empty($fecha_inicio) || empty($fecha_fin)) {
         $error = 'Por favor complete todos los campos obligatorios (*).';
     } elseif (strlen($password) < 8) {
         $error = 'La contraseña debe tener al menos 8 caracteres.';
@@ -133,21 +133,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 $id_pasante = (int)$db->lastInsertId();
 
-                // Initial process with the requested modality and dates
-                $stmtMod = $db->prepare("SELECT horas_requeridas_base FROM modalidades WHERE id_modalidad = :id AND estado = 1");
-                $stmtMod->execute([':id' => $id_modalidad]);
-                $mod = $stmtMod->fetch();
-                if (!$mod) {
-                    throw new Exception('Modalidad solicitada inválida.');
+                // Initial process: linked modality or pure internship track (hours only)
+                $horasBase = 1000;
+                if ($id_modalidad > 0) {
+                    $stmtMod = $db->prepare("SELECT horas_requeridas_base FROM modalidades WHERE id_modalidad = :id AND estado = 1");
+                    $stmtMod->execute([':id' => $id_modalidad]);
+                    $mod = $stmtMod->fetch();
+                    if (!$mod) {
+                        throw new Exception('Modalidad solicitada inválida.');
+                    }
+                    $horasBase = (int)$mod['horas_requeridas_base'];
                 }
                 $stmtProceso = $db->prepare("INSERT INTO procesos (id_pasante, id_institucion, id_modalidad, fecha_inicio, fecha_fin, horas_requeridas, estado, observacion)
                                              VALUES (:id_pasante, 4, :id_modalidad, :ini, :fin, :horas, 'EN_CURSO', 'Asignación inicial al registrar pasante')");
                 $stmtProceso->execute([
                     ':id_pasante'  => $id_pasante,
-                    ':id_modalidad'=> $id_modalidad,
+                    ':id_modalidad'=> $id_modalidad > 0 ? $id_modalidad : null,
                     ':ini'         => $fecha_inicio,
                     ':fin'         => $fecha_fin,
-                    ':horas'       => $mod['horas_requeridas_base'],
+                    ':horas'       => $horasBase,
                 ]);
 
                 // Store documents on disk and register them
@@ -306,9 +310,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="id_modalidad">Modalidad solicitada *</label>
-                        <select id="id_modalidad" name="id_modalidad" class="form-control" required>
-                            <option value="">Seleccionar Proyecto de Grado o Trabajo Dirigido</option>
+                        <label for="id_modalidad">Modalidad solicitada</label>
+                        <select id="id_modalidad" name="id_modalidad" class="form-control">
+                            <option value="0">Solo pasantía (horas, sin modalidad)</option>
                             <?php foreach ($modalidades as $m): ?>
                                 <option value="<?= $m['id_modalidad'] ?>" <?= (isset($_POST['id_modalidad']) && $_POST['id_modalidad'] == $m['id_modalidad']) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($m['nombre']) ?>

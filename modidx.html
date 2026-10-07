@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modalidades de Graduación / Pasantía - CCDB Sistema Web</title>
+    <!-- Google Fonts & Font Awesome CDN -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Estilos del Sistema -->
+    <link rel="stylesheet" href="../../assets/css/style.css">
+</head>
+<body>
+<aside class="sidebar">
+    <a href="../../index.php" class="sidebar-brand">
+        <img src="../../assets/img/logo_donbosco.svg" alt="Logo Don Bosco CCDB">
+        <div class="sidebar-brand-text">
+            <h2>Don Bosco</h2>
+            <span>CCDB Panel</span>
+        </div>
+    </a>
+
+    <ul class="sidebar-menu">
+        <div class="sidebar-heading">Principal</div>
+        <li>
+            <a href="../../index.php" class="">
+                <i class="fa-solid fa-house"></i>
+                <span>Inicio</span>
+            </a>
+        </li>
+
+        <div class="sidebar-heading">Gestión Operativa</div>
+                <li>
+            <a href="../../views/pasantes/index.php" class="">
+                <i class="fa-solid fa-user-graduate"></i>
+                <span>Pasantes</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/modalidades/index.php" class="active">
+                <i class="fa-solid fa-folder-open"></i>
+                <span>Modalidades</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/asistencias/registrar_qr.php" class="">
+                <i class="fa-solid fa-qrcode"></i>
+                <span>Asistencia QR</span>
+            </a>
+        </li>
+                <li>
+            <a href="../../views/asistencias/historial.php" class="">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>Historial Asistencias</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/asistencias/progreso_horas.php" class="">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Progreso de Horas</span>
+            </a>
+        </li>
+
+                <div class="sidebar-heading">Supervisión y Control</div>
+        <li>
+            <a href="../../views/sanciones/index.php" class="">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Sanciones</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/modalidades/reporte_avance.php" class="">
+                <i class="fa-solid fa-file-contract"></i>
+                <span>Reportes</span>
+            </a>
+        </li>
+        <li>
+            <a href="../../views/tutores/index.php" class="">
+                <i class="fa-solid fa-user-tie"></i>
+                <span>Tutores</span>
+            </a>
+        </li>
+        
+                <div class="sidebar-heading">Administración</div>
+        <li>
+            <a href="../../views/usuarios/index.php" class="">
+                <i class="fa-solid fa-users-gear"></i>
+                <span>Gestión de Usuarios</span>
+            </a>
+        </li>
+            </ul>
+
+    <div class="sidebar-footer">
+        <a href="../../logout.php" class="btn-sidebar-logout" onclick="return confirm('¿Está seguro de cerrar sesión?');">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <span>Cerrar sesión</span>
+        </a>
+    </div>
+</aside>
+
+<div class="main-wrapper">
+    <header class="top-navbar">
+    <div class="nav-left">
+        <h3>Modalidades de Graduación / Pasantía</h3>
+    </div>
+
+    <div class="nav-right">
+        <div class="user-badge">
+            <div class="user-avatar">
+                <i class="fa-solid fa-user-tie"></i>
+            </div>
+            <div class="user-info">
+                <div class="user-name">Bienvenido, Administrador CCDB</div>
+                <div class="user-role">ADMINISTRADOR</div>
+            </div>
+        </div>
+
+        <a href="../../logout.php" class="btn-logout-nav" title="Cerrar sesión" onclick="return confirm('¿Desea cerrar la sesión actual?');">
+            <i class="fa-solid fa-power-off"></i>
+            <span>Cerrar sesión</span>
+        </a>
+    </div>
+</header>
+
+    <main class="content-body">
+        
+        <div class="card">
+            <div class="card-header-flex">
+                <div>
+                    <h3 class="card-title">Modalidades Habilitadas en CCDB</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+                        Modalidades técnicas y académicas admitidas para la certificación de estudiantes.
+                    </p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <a href="asignar.php" class="btn btn-danger">
+                        <i class="fa-solid fa-plus-circle"></i> Asignar Modalidad a Pasante
+                    </a>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre de la Modalidad</th>
+                            <th>Descripción</th>
+                            <th>Horas Base Reglamentarias</th>
+                            <th>Estudiantes Activos</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                                                    <tr>
+                                <td>#1</td>
+                                <td>
+                                    <strong style="color: var(--primary-blue); font-size: 0.98rem;">Proyecto de Grado</strong>
+                                </td>
+                                <td>Modalidad de titulación mediante proyecto de grado institucional</td>
+                                <td>
+                                    <span class="badge badge-info" style="font-size: 0.85rem;">1000 horas</span>
+                                </td>
+                                <td>
+                                    <strong style="color: #16a34a;">2 en curso</strong>
+                                </td>
+                                <td>
+                                    <span class="badge badge-success">Activo</span>
+                                </td>
+                                <td>
+                                    <a href="asignar.php?id_modalidad=1" class="btn btn-outline btn-sm">
+                                        <i class="fa-solid fa-user-plus"></i> Asignar
+                                    </a>
+                                </td>
+                            </tr>
+                                                    <tr>
+                                <td>#2</td>
+                                <td>
+                                    <strong style="color: var(--primary-blue); font-size: 0.98rem;">Trabajo Dirigido</strong>
+                                </td>
+                                <td>Modalidad de titulaci?n mediante trabajo institucional dirigido</td>
+                                <td>
+                                    <span class="badge badge-info" style="font-size: 0.85rem;">1000 horas</span>
+                                </td>
+                                <td>
+                                    <strong style="color: #16a34a;">1 en curso</strong>
+                                </td>
+                                <td>
+                                    <span class="badge badge-success">Activo</span>
+                                </td>
+                                <td>
+                                    <a href="asignar.php?id_modalidad=2" class="btn btn-outline btn-sm">
+                                        <i class="fa-solid fa-user-plus"></i> Asignar
+                                    </a>
+                                </td>
+                            </tr>
+                                            </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 24px;">
+            <div class="card-header-flex">
+                <div>
+                    <h3 class="card-title">Modalidades activas</h3>
+                </div>
+                <a href="asignar.php" class="btn btn-primary btn-sm">
+                    <i class="fa-solid fa-plus"></i> Nueva modalidad
+                </a>
+                <a href="turnos.php" class="btn btn-outline btn-sm" style="margin-left: 8px;">
+                    <i class="fa-solid fa-clock"></i> Turnos
+                </a>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                <a href="index.php?tab=activas" class="btn btn-sm btn-primary">
+                    Modalidades activas
+                </a>
+                <a href="index.php?tab=inactivas" class="btn btn-sm btn-outline">
+                    Modalidades inactivas
+                </a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Modalidad</th>
+                            <th>Postulante</th>
+                            <th>Institución y carrera</th>
+                            <th>Tutor asignado</th>
+                            <th>Turno</th>
+                            <th>Horas / Tiempo proyectado</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                                                                                    <tr>
+                                    <td>
+                                        <strong>Trabajo Dirigido</strong><br>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);">
+                                            800 horas requeridas                                        </span>
+                                    </td>
+                                    <td>
+                                                                                    <span style="color: var(--text-muted); font-style: italic;">Registro independiente</span>
+                                                                            </td>
+                                    <td>
+                                        Centro Cultural Don Bosco (CCDB)<br>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);"></span>
+                                    </td>
+                                    <td>
+                                        <span style="color: var(--text-muted);">No asignado</span>                                    </td>
+                                    <td>—</td>
+                                    <td>6 meses</td>
+                                    <td>
+                                                                                    <span class="badge badge-success">ACTIVA</span>
+                                                                            </td>
+                                    <td style="white-space: nowrap;">
+                                                                                    <span style="color: var(--text-muted); font-size: 0.8rem;">—</span>
+                                                                            </td>
+                                </tr>
+                                                            <tr>
+                                    <td>
+                                        <strong>Proyecto de Grado</strong><br>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);">
+                                            Horas no aplican                                        </span>
+                                    </td>
+                                    <td>
+                                                                                    Disney Prueba CCDB                                                                            </td>
+                                    <td>
+                                        Centro Cultural Don Bosco (CCDB)<br>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);">Sistemas Inform?ticos</span>
+                                    </td>
+                                    <td>
+                                        <span style="color: var(--text-muted);">No asignado</span>                                    </td>
+                                    <td>—</td>
+                                    <td>6 meses</td>
+                                    <td>
+                                                                                    <span class="badge badge-success">ACTIVA</span>
+                                                                            </td>
+                                    <td style="white-space: nowrap;">
+                                                                                    <a href="../pasantes/editar.php?id=2" class="btn btn-outline btn-sm" title="Editar postulante">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </a>
+                                            <a href="../asistencias/historial.php?id_pasante=2" class="btn btn-outline btn-sm" title="Ver asistencias">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </a>
+                                                                            </td>
+                                </tr>
+                                                            <tr>
+                                    <td>
+                                        <strong>Proyecto de Grado</strong><br>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);">
+                                            Horas no aplican                                        </span>
+                                    </td>
+                                    <td>
+                                                                                    Carlos Andr?s Mamani Quispe                                                                            </td>
+                                    <td>
+                                        Centro Cultural Don Bosco (CCDB)<br>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);">Sistemas Inform?ticos</span>
+                                    </td>
+                                    <td>
+                                        <span style="color: var(--text-muted);">No asignado</span>                                    </td>
+                                    <td>Tarde · 15:00–18:00</td>
+                                    <td>6 meses</td>
+                                    <td>
+                                                                                    <span class="badge badge-success">ACTIVA</span>
+                                                                            </td>
+                                    <td style="white-space: nowrap;">
+                                                                                    <a href="../pasantes/editar.php?id=1" class="btn btn-outline btn-sm" title="Editar postulante">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </a>
+                                            <a href="../asistencias/historial.php?id_pasante=1" class="btn btn-outline btn-sm" title="Ver asistencias">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </a>
+                                                                            </td>
+                                </tr>
+                                                                        </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+        <footer class="main-footer">
+        <div>
+            <strong>Centro Cultural Don Bosco (CCDB)</strong> &copy; 2026. Todos los derechos reservados.
+        </div>
+        <div>
+            <span>Sistema Web de Control y Seguimiento de Pasantes &bull; V1.0</span>
+        </div>
+    </footer>
+</body>
+</html>
+</div>

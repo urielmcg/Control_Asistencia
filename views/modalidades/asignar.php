@@ -19,40 +19,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id_institucion = (int)($_POST['id_institucion'] ?? 4); // Default CCDB
     $fecha_inicio = trim($_POST['fecha_inicio'] ?? date('Y-m-d'));
     $fecha_fin = !empty($_POST['fecha_fin']) ? trim($_POST['fecha_fin']) : null;
-    $horas_requeridas = (int)($_POST['horas_requeridas'] ?? 1000);
+    $horas_requeridas = trim($_POST['horas_requeridas'] ?? '');
     $observacion = trim($_POST['observacion'] ?? '');
     $id_turno = (int)($_POST['id_turno'] ?? 0);
+    $id_tutor = (int)($_POST['id_tutor'] ?? 0);
 
-    if ($id_pasante <= 0 || $id_modalidad <= 0 || $horas_requeridas <= 0) {
-        $error = 'Por favor seleccione al pasante, la modalidad e ingrese las horas requeridas válidas.';
+    $stmtMod = $db->prepare("SELECT nombre FROM modalidades WHERE id_modalidad = :id");
+    $stmtMod->execute([':id' => $id_modalidad]);
+    $modNombre = $stmtMod->fetchColumn();
+    $esPG = ($modNombre === 'Proyecto de Grado');
+
+    if ($id_modalidad <= 0) {
+        $error = 'Por favor seleccione la modalidad.';
+    } elseif (!$esPG && ($horas_requeridas === '' || (int)$horas_requeridas <= 0)) {
+        $error = 'Indique las horas requeridas según facultad (ej. 280, 300, 400, 800, 1000).';
     } else {
         try {
+            if ($id_pasante > 0) {
+                $stmtP = $db->prepare("SELECT id_pasante FROM pasantes WHERE id_pasante = :id");
+                $stmtP->execute([':id' => $id_pasante]);
+                if (!$stmtP->fetch()) {
+                    throw new Exception('Pasante seleccionado inválido.');
+                }
+            }
             $stmtTurno = $db->prepare("SELECT id_turno FROM turnos WHERE id_turno = :id AND estado = 1");
             $stmtTurno->execute([':id' => $id_turno]);
             if ($id_turno > 0 && !$stmtTurno->fetch()) {
                 throw new Exception('Turno seleccionado inválido.');
             }
             $stmt = $db->prepare("INSERT INTO procesos (id_pasante, id_institucion, id_modalidad, id_tutor, id_turno, fecha_inicio, fecha_fin, horas_requeridas, estado, observacion)
-                                  VALUES (:id_pasante, :id_institucion, :id_modalidad, NULL, :id_turno, :fecha_inicio, :fecha_fin, :horas_requeridas, 'EN_CURSO', :observacion)");
+                                  VALUES (:id_pasante, :id_institucion, :id_modalidad, :id_tutor, :id_turno, :fecha_inicio, :fecha_fin, :horas, 'EN_CURSO', :observacion)");
             $stmt->execute([
-                ':id_pasante'        => $id_pasante,
+                ':id_pasante'        => $id_pasante > 0 ? $id_pasante : null,
                 ':id_institucion'    => $id_institucion,
                 ':id_modalidad'      => $id_modalidad,
+                ':id_tutor'          => $id_tutor > 0 ? $id_tutor : null,
                 ':id_turno'          => $id_turno > 0 ? $id_turno : null,
                 ':fecha_inicio'      => $fecha_inicio,
                 ':fecha_fin'         => $fecha_fin,
-                ':horas_requeridas'  => $horas_requeridas,
+                ':horas'             => $esPG ? null : (int)$horas_requeridas,
                 ':observacion'       => $observacion ?: null
             ]);
 
             $id_proceso = $db->lastInsertId();
-            Auth::logAudit('ASIGNAR_MODALIDAD', 'procesos', $id_proceso, "Proceso asignado: Pasante $id_pasante, Modalidad $id_modalidad, Horas: $horas_requeridas");
+            Auth::logAudit('ASIGNAR_MODALIDAD', 'procesos', $id_proceso, "Registro de modalidad: $modNombre" . ($id_pasante > 0 ? ", Pasante $id_pasante" : " (independiente)"));
 
-            $_SESSION['flash_success'] = 'Modalidad asignada exitosamente al pasante.';
-            header("Location: ../asistencias/progreso_horas.php");
+            $_SESSION['flash_success'] = 'Modalidad registrada exitosamente.';
+            header("Location: index.php");
             exit;
         } catch (Exception $e) {
-            $error = 'Error al asignar modalidad: ' . $e->getMessage();
+            $error = 'Error al registrar modalidad: ' . $e->getMessage();
         }
     }
 }
@@ -62,6 +78,7 @@ $pasantes = $db->query("SELECT id_pasante, nombres, apellidos, ci FROM pasantes 
 $modalidades = $db->query("SELECT * FROM modalidades WHERE estado = 1 ORDER BY nombre ASC")->fetchAll();
 $instituciones = $db->query("SELECT id_institucion, nombre FROM instituciones WHERE estado = 1 ORDER BY nombre ASC")->fetchAll();
 $turnos = $db->query("SELECT * FROM turnos WHERE estado = 1 ORDER BY hora_inicio ASC")->fetchAll();
+$tutores = $db->query("SELECT id_tutor, nombre FROM tutores WHERE estado = 'ACTIVO' ORDER BY nombre ASC")->fetchAll();
 
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
@@ -74,9 +91,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <div class="card" style="max-width: 800px; margin: 0 auto;">
             <div class="card-header-flex">
                 <div>
-                    <h3 class="card-title">Asignar Modalidad / Apertura de Proceso</h3>
+                    <h3 class="card-title">Registrar Modalidad / Apertura de Proceso</h3>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
-                        Vincula a un estudiante activo con su modalidad de titulación o pasantía y define la meta de horas.
+                        Registra una modalidad de graduación (Proyecto de Grado o Trabajo Dirigido).
+                        Los pasantes son aparte: puede quedar como registro independiente.
                     </p>
                 </div>
                 <a href="index.php" class="btn btn-outline">
@@ -93,10 +111,20 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
             <form action="asignar.php" method="POST">
                 <div class="form-grid">
+                    <div class="form-group">
+                        <label for="id_tutor">Tutor (opcional)</label>
+                        <select name="id_tutor" id="id_tutor" class="form-control">
+                            <option value="0">-- Sin tutor --</option>
+                            <?php foreach ($tutores as $t): ?>
+                                <option value="<?= $t['id_tutor'] ?>"><?= htmlspecialchars($t['nombre']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
                     <div class="form-group" style="grid-column: 1 / -1;">
-                        <label for="id_pasante">Seleccionar Pasante *</label>
-                        <select name="id_pasante" id="id_pasante" class="form-control" required>
-                            <option value="">-- Seleccionar Estudiante --</option>
+                        <label for="id_pasante">Vincular Pasante (opcional)</label>
+                        <select name="id_pasante" id="id_pasante" class="form-control">
+                            <option value="0">-- Registro independiente (sin pasante) --</option>
                             <?php foreach ($pasantes as $p): ?>
                                 <option value="<?= $p['id_pasante'] ?>" <?= ($prePasanteId === (int)$p['id_pasante']) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($p['apellidos'] . ' ' . $p['nombres']) ?> (CI: <?= htmlspecialchars($p['ci']) ?>)
@@ -118,8 +146,16 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </div>
 
                     <div class="form-group">
-                        <label for="horas_requeridas">Horas Requeridas *</label>
-                        <input type="number" name="horas_requeridas" id="horas_requeridas" class="form-control" value="1000" min="10" step="10" required>
+                        <label for="horas_requeridas">Horas Requeridas (solo Trabajo Dirigido)</label>
+                        <input type="number" name="horas_requeridas" id="horas_requeridas" class="form-control" value="" min="10" step="10" list="horas_facultad" placeholder="280, 300, 400, 800, 1000">
+                        <datalist id="horas_facultad">
+                            <option value="280"></option>
+                            <option value="300"></option>
+                            <option value="400"></option>
+                            <option value="800"></option>
+                            <option value="1000"></option>
+                        </datalist>
+                        <small style="color: var(--text-muted);">Proyecto de Grado no lleva horas (se mide en meses).</small>
                     </div>
 
                     <div class="form-group">

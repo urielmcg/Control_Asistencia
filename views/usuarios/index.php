@@ -63,6 +63,17 @@ $usuarios = $db->query("SELECT u.*, r.nombre AS rol_nombre
                         INNER JOIN roles r ON u.id_rol = r.id_rol 
                         ORDER BY u.id_usuario DESC")->fetchAll();
 
+// Track per intern user (Pasantía pura / Trabajo Dirigido / Proyecto de Grado)
+$tracks = [];
+$stmtTr = $db->query("SELECT pas.ci, COALESCE(m.nombre, 'Pasantía') AS track
+                       FROM procesos pr
+                       INNER JOIN pasantes pas ON pr.id_pasante = pas.id_pasante
+                       LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                       WHERE pr.estado = 'EN_CURSO'");
+foreach ($stmtTr->fetchAll() as $tr) {
+    $tracks[$tr['ci']][] = $tr['track'];
+}
+
 $roles = $db->query("SELECT * FROM roles WHERE estado = 1")->fetchAll();
 
 require_once __DIR__ . '/../../includes/header.php';
@@ -171,6 +182,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         <span class="badge <?= ($u['rol_nombre'] === 'ADMINISTRADOR') ? 'badge-danger' : 'badge-info' ?>">
                                             <?= htmlspecialchars($u['rol_nombre']) ?>
                                         </span>
+                                        <?php if ($u['rol_nombre'] === 'PASANTE' && !empty($tracks[$u['ci']])): ?>
+                                            <br><small style="color: var(--text-muted);"><?= htmlspecialchars(implode(' · ', array_unique($tracks[$u['ci']]))) ?></small>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <span class="badge badge-success">Activo</span>

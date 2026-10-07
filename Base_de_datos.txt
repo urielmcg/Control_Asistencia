@@ -244,16 +244,16 @@ CREATE TABLE documentos (
 CREATE TABLE procesos (
     id_proceso INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
-    id_pasante INT UNSIGNED NOT NULL,
+    id_pasante INT UNSIGNED NULL,
     id_institucion INT UNSIGNED NOT NULL,
-    id_modalidad INT UNSIGNED NOT NULL,
+    id_modalidad INT UNSIGNED NULL,
     id_tutor INT UNSIGNED NULL,
     id_turno INT UNSIGNED NULL,
 
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE NULL,
 
-    horas_requeridas INT UNSIGNED NOT NULL,
+    horas_requeridas INT UNSIGNED NULL,
     estado VARCHAR(30) NOT NULL DEFAULT 'EN_CURSO',
 
     observacion TEXT,
@@ -285,7 +285,10 @@ CREATE TABLE procesos (
         ON DELETE SET NULL,
 
     CONSTRAINT chk_proceso_horas
-        CHECK (horas_requeridas > 0),
+        CHECK (
+            horas_requeridas IS NULL
+            OR horas_requeridas > 0
+        ),
 
     CONSTRAINT chk_proceso_fechas
         CHECK (
@@ -658,6 +661,10 @@ VALUES
 -- Esta vista calcula las horas directamente a partir de
 -- hora_entrada y hora_salida.
 --
+-- Solo incluye procesos con meta de horas (pasantía pura y
+-- Trabajo Dirigido). Proyecto de Grado se mide en días y
+-- queda fuera de esta vista.
+--
 -- No guardamos horas_trabajadas en ASISTENCIAS porque es
 -- un dato calculable.
 -- ============================================================
@@ -717,7 +724,11 @@ GROUP BY
     p.id_proceso,
     p.id_pasante,
     p.id_modalidad,
-    p.horas_requeridas;
+    p.horas_requeridas
+
+HAVING
+    p.horas_requeridas IS NOT NULL
+    AND p.horas_requeridas > 0;
 
 
 -- ============================================================

@@ -7,6 +7,7 @@
  * session (never from the QR); the QR only proves day and place.
  */
 require_once __DIR__ . '/../../config/auth.php';
+require_once __DIR__ . '/../../includes/marcado.php';
 
 $db = Database::getConnection();
 $qrToken = trim($_GET['qr'] ?? '');
@@ -74,8 +75,8 @@ if ($qrProblem === '' && ($_SERVER['REQUEST_METHOD'] === 'POST' || $directMark))
             $result = 'error';
             $message = 'Tu registro de pasante no está ACTIVO (estado: ' . $pasante['estado'] . ').';
         } else {
-            $stmtProc = $db->prepare("SELECT pr.*, m.nombre AS modalidad FROM procesos pr
-                                      INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+            $stmtProc = $db->prepare("SELECT pr.*, COALESCE(m.nombre, 'Pasantía') AS modalidad FROM procesos pr
+                                      LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
                                       WHERE pr.id_pasante = :id AND pr.estado = 'EN_CURSO'
                                       ORDER BY pr.id_proceso DESC LIMIT 1");
             $stmtProc->execute([':id' => $pasante['id_pasante']]);
@@ -92,18 +93,31 @@ if ($qrProblem === '' && ($_SERVER['REQUEST_METHOD'] === 'POST' || $directMark))
                 $asis = $stmtA->fetch();
 
                 if (!$asis) {
-                    $stmtIns = $db->prepare("INSERT INTO asistencias (id_proceso, id_qr, fecha, hora_entrada, estado, observacion)
-                                             VALUES (:proc, :qr, :fecha, :hora, 'PRESENTE', 'Auto-marcado móvil ENTRADA')");
-                    $stmtIns->execute([':proc' => $proceso['id_proceso'], ':qr' => $qrRow['id_qr'], ':fecha' => $hoy, ':hora' => $ahora]);
-                    header('Location: marcar.php?qr=' . urlencode($qrToken) . '&marcado=entrada');
-                    exit;
+                    $vEntrada = ventanaEntrada(new DateTime());
+                    if (!$vEntrada['ok']) {
+                        $result = 'error';
+                        $message = $vEntrada['error'];
+                    } else {
+                        $stmtIns = $db->prepare("INSERT INTO asistencias (id_proceso, id_qr, fecha, hora_entrada, estado, observacion)
+                                                 VALUES (:proc, :qr, :fecha, :hora, 'PRESENTE', 'Auto-marcado móvil ENTRADA')");
+                        $stmtIns->execute([':proc' => $proceso['id_proceso'], ':qr' => $qrRow['id_qr'], ':fecha' => $hoy, ':hora' => $ahora]);
+                        header('Location: marcar.php?qr=' . urlencode($qrToken) . '&marcado=entrada');
+                        exit;
+                    }
                 } elseif (empty($asis['hora_salida'])) {
-                    $stmtUpd = $db->prepare("UPDATE asistencias SET hora_salida = :hora,
-                                             observacion = CONCAT(COALESCE(observacion, ''), ' | Auto-marcado móvil SALIDA')
-                                             WHERE id_asistencia = :id");
-                    $stmtUpd->execute([':hora' => $ahora, ':id' => $asis['id_asistencia']]);
-                    header('Location: marcar.php?qr=' . urlencode($qrToken) . '&marcado=salida');
-                    exit;
+                    $vSalida = ventanaMarcacion(new DateTime());
+                    if (!$vSalida['ok']) {
+                        $result = 'error';
+                        $message = $vSalida['error'];
+                    } else {
+                        $horaSalida = $vSalida['hora_salida'];
+                        $stmtUpd = $db->prepare("UPDATE asistencias SET hora_salida = :hora,
+                                                 observacion = CONCAT(COALESCE(observacion, ''), ' | Auto-marcado móvil SALIDA')
+                                                 WHERE id_asistencia = :id");
+                        $stmtUpd->execute([':hora' => $horaSalida, ':id' => $asis['id_asistencia']]);
+                        header('Location: marcar.php?qr=' . urlencode($qrToken) . '&marcado=salida');
+                        exit;
+                    }
                 } else {
                     header('Location: marcar.php?qr=' . urlencode($qrToken) . '&marcado=done');
                     exit;

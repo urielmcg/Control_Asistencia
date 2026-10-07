@@ -15,7 +15,7 @@ $estadoFiltro = trim($_GET['estado'] ?? '');
 
 $sql = "SELECT p.*, i.nombre AS institucion, c.nombre AS carrera,
                (SELECT pr.estado FROM procesos pr WHERE pr.id_pasante = p.id_pasante ORDER BY pr.id_proceso DESC LIMIT 1) AS estado_proceso,
-               (SELECT m.nombre FROM procesos pr INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad WHERE pr.id_pasante = p.id_pasante ORDER BY pr.id_proceso DESC LIMIT 1) AS modalidad_actual
+               (SELECT COALESCE(m.nombre, 'Pasantía') FROM procesos pr LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad WHERE pr.id_pasante = p.id_pasante ORDER BY pr.id_proceso DESC LIMIT 1) AS modalidad_actual
         FROM pasantes p
         INNER JOIN instituciones i ON p.id_universidad = i.id_institucion
         INNER JOIN carreras c ON p.id_carrera = c.id_carrera

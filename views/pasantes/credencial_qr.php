@@ -26,9 +26,9 @@ if ($id_pasante > 0) {
 
     if ($pasante) {
         // Consultar proceso / modalidad activa
-        $stmtProc = $db->prepare("SELECT pr.*, m.nombre AS modalidad, m.descripcion AS modalidad_desc
+        $stmtProc = $db->prepare("SELECT pr.*, COALESCE(m.nombre, 'Pasantía') AS modalidad, m.descripcion AS modalidad_desc
                                   FROM procesos pr
-                                  INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                                  LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
                                   WHERE pr.id_pasante = :id_pasante AND pr.estado = 'EN_CURSO'
                                   ORDER BY pr.id_proceso DESC LIMIT 1");
         $stmtProc->execute([':id_pasante' => $id_pasante]);
@@ -36,9 +36,9 @@ if ($id_pasante > 0) {
 
         // Si no tiene 'EN_CURSO', buscar el último proceso registrado
         if (!$procesoActivo) {
-            $stmtLast = $db->prepare("SELECT pr.*, m.nombre AS modalidad, m.descripcion AS modalidad_desc
+            $stmtLast = $db->prepare("SELECT pr.*, COALESCE(m.nombre, 'Pasantía') AS modalidad, m.descripcion AS modalidad_desc
                                       FROM procesos pr
-                                      INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                                      LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
                                       WHERE pr.id_pasante = :id_pasante
                                       ORDER BY pr.id_proceso DESC LIMIT 1");
             $stmtLast->execute([':id_pasante' => $id_pasante]);

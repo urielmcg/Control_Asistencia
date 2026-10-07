@@ -23,7 +23,7 @@ $stmtSol = $db->prepare("SELECT pr.*, p.nombres, p.apellidos, p.ci, p.id_pasante
                                 t.nombre AS tutor,
                                 tu.nombre AS turno_nombre, tu.hora_inicio AS turno_ini, tu.hora_fin AS turno_fin
                          FROM procesos pr
-                         INNER JOIN pasantes p ON pr.id_pasante = p.id_pasante
+                         LEFT JOIN pasantes p ON pr.id_pasante = p.id_pasante
                          INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
                          LEFT JOIN instituciones i ON pr.id_institucion = i.id_institucion
                          LEFT JOIN carreras c ON p.id_carrera = c.id_carrera
@@ -169,7 +169,13 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                             <?= $sol['modalidad'] === 'Proyecto de Grado' ? 'Horas no aplican' : htmlspecialchars($sol['horas_requeridas'] . ' horas requeridas') ?>
                                         </span>
                                     </td>
-                                    <td><?= htmlspecialchars($sol['nombres'] . ' ' . $sol['apellidos']) ?></td>
+                                    <td>
+                                        <?php if (!empty($sol['id_pasante'])): ?>
+                                            <?= htmlspecialchars(($sol['nombres'] ?? '') . ' ' . ($sol['apellidos'] ?? '')) ?>
+                                        <?php else: ?>
+                                            <span style="color: var(--text-muted); font-style: italic;">Registro independiente</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td>
                                         <?= htmlspecialchars($sol['institucion'] ?? '-') ?><br>
                                         <span style="font-size: 0.78rem; color: var(--text-muted);"><?= htmlspecialchars($sol['carrera'] ?? '') ?></span>
@@ -187,12 +193,16 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         <?php endif; ?>
                                     </td>
                                     <td style="white-space: nowrap;">
-                                        <a href="../pasantes/editar.php?id=<?= $sol['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Editar postulante">
-                                            <i class="fa-solid fa-pen"></i>
-                                        </a>
-                                        <a href="../asistencias/historial.php?id_pasante=<?= $sol['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Ver asistencias">
-                                            <i class="fa-solid fa-eye"></i>
-                                        </a>
+                                        <?php if (!empty($sol['id_pasante'])): ?>
+                                            <a href="../pasantes/editar.php?id=<?= $sol['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Editar postulante">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </a>
+                                            <a href="../asistencias/historial.php?id_pasante=<?= $sol['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Ver asistencias">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </a>
+                                        <?php else: ?>
+                                            <span style="color: var(--text-muted); font-size: 0.8rem;">—</span>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

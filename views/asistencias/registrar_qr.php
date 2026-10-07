@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../../config/auth.php';
 Auth::requireStaff();
+require_once __DIR__ . '/../../includes/marcado.php';
 
 $pageTitle = 'Registro de Asistencia QR';
 $activeMenu = 'asistencias_qr';
@@ -158,11 +159,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mensaje = "El pasante " . $pasante['nombres'] . " " . $pasante['apellidos'] . " no se encuentra en estado ACTIVO (Estado actual: " . $pasante['estado'] . ").";
                 $tipoMensaje = 'danger';
             } else {
-                // Buscar proceso activo
-                $stmtProc = $db->prepare("SELECT pr.*, m.nombre AS modalidad 
-                                          FROM procesos pr 
-                                          INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad 
-                                          WHERE pr.id_pasante = :id_pasante AND pr.estado = 'EN_CURSO' 
+                // Buscar proceso activo (puro, TD o PG)
+                $stmtProc = $db->prepare("SELECT pr.*, COALESCE(m.nombre, 'Pasantía') AS modalidad
+                                          FROM procesos pr
+                                          LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                                          WHERE pr.id_pasante = :id_pasante AND pr.estado = 'EN_CURSO'
                                           ORDER BY pr.id_proceso DESC LIMIT 1");
                 $stmtProc->execute([':id_pasante' => $pasante['id_pasante']]);
                 $proceso = $stmtProc->fetch();
@@ -181,49 +182,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $asistenciaHoy = $stmtAsis->fetch();
 
                     if (!$asistenciaHoy) {
-                        // REGISTRAR ENTRADA
-                        $stmtIns = $db->prepare("INSERT INTO asistencias (id_proceso, id_qr, fecha, hora_entrada, estado, observacion) 
-                                                 VALUES (:id_proceso, :id_qr, :fecha, :hora_entrada, 'PRESENTE', 'Marcado biométrico/QR Entrada')");
-                        $stmtIns->execute([
-                            ':id_proceso'     => $proceso['id_proceso'],
-                            ':id_qr'          => $idQrActual,
-                            ':fecha'          => $hoy,
-                            ':hora_entrada'   => $ahora
-                        ]);
+                        // REGISTRAR ENTRADA (solo dentro de la ventana 09:00-12:00, lun-sáb)
+                        $vEntrada = ventanaEntrada(new DateTime());
+                        if (!$vEntrada['ok']) {
+                            $mensaje = $vEntrada['error'];
+                            $tipoMensaje = 'danger';
+                        } else {
+                            $stmtIns = $db->prepare("INSERT INTO asistencias (id_proceso, id_qr, fecha, hora_entrada, estado, observacion)
+                                                     VALUES (:id_proceso, :id_qr, :fecha, :hora_entrada, 'PRESENTE', 'Marcado biométrico/QR Entrada')");
+                            $stmtIns->execute([
+                                ':id_proceso'     => $proceso['id_proceso'],
+                                ':id_qr'          => $idQrActual,
+                                ':fecha'          => $hoy,
+                                ':hora_entrada'   => $ahora
+                            ]);
 
-                        $mensaje = "¡ENTRADA REGISTRADA! " . $pasante['nombres'] . " " . $pasante['apellidos'] . " a las $ahora.";
-                        $tipoMensaje = 'success';
-                        $datosMarcado = [
-                            'tipo' => 'ENTRADA',
-                            'hora' => $ahora,
-                            'pasante' => $pasante['nombres'] . ' ' . $pasante['apellidos'],
-                            'ci' => $pasante['ci'],
-                            'modalidad' => $proceso['modalidad']
-                        ];
+                            $mensaje = "¡ENTRADA REGISTRADA! " . $pasante['nombres'] . " " . $pasante['apellidos'] . " a las $ahora.";
+                            $tipoMensaje = 'success';
+                            $datosMarcado = [
+                                'tipo' => 'ENTRADA',
+                                'hora' => $ahora,
+                                'pasante' => $pasante['nombres'] . ' ' . $pasante['apellidos'],
+                                'ci' => $pasante['ci'],
+                                'modalidad' => $proceso['modalidad']
+                            ];
+                        }
                     } else if (empty($asistenciaHoy['hora_salida'])) {
-                        // REGISTRAR SALIDA
-                        $stmtUpd = $db->prepare("UPDATE asistencias SET hora_salida = :hora_salida, observacion = CONCAT(COALESCE(observacion,''), ' | Marcado QR Salida') 
-                                                 WHERE id_asistencia = :id_asistencia");
-                        $stmtUpd->execute([
-                            ':hora_salida'   => $ahora,
-                            ':id_asistencia' => $asistenciaHoy['id_asistencia']
-                        ]);
+                        // REGISTRAR SALIDA (tope 12:00 si marca después)
+                        $vSalida = ventanaMarcacion(new DateTime());
+                        if (!$vSalida['ok']) {
+                            $mensaje = $vSalida['error'];
+                            $tipoMensaje = 'danger';
+                        } else {
+                            $horaSalida = $vSalida['hora_salida'];
+                            $stmtUpd = $db->prepare("UPDATE asistencias SET hora_salida = :hora_salida, observacion = CONCAT(COALESCE(observacion,''), ' | Marcado QR Salida')
+                                                     WHERE id_asistencia = :id_asistencia");
+                            $stmtUpd->execute([
+                                ':hora_salida'   => $horaSalida,
+                                ':id_asistencia' => $asistenciaHoy['id_asistencia']
+                            ]);
 
-                        // Calcular horas cumplidas hoy
-                        $diffSegundos = strtotime($ahora) - strtotime($asistenciaHoy['hora_entrada']);
-                        $horasHoy = round($diffSegundos / 3600.0, 2);
+                            // Calcular horas cumplidas hoy
+                            $diffSegundos = strtotime($horaSalida) - strtotime($asistenciaHoy['hora_entrada']);
+                            $horasHoy = round($diffSegundos / 3600.0, 2);
 
-                        $mensaje = "¡SALIDA REGISTRADA! " . $pasante['nombres'] . " " . $pasante['apellidos'] . " a las $ahora. Total de hoy: $horasHoy hrs.";
-                        $tipoMensaje = 'success';
-                        $datosMarcado = [
-                            'tipo' => 'SALIDA',
-                            'hora' => $ahora,
-                            'hora_entrada' => $asistenciaHoy['hora_entrada'],
-                            'horas_trabajadas' => $horasHoy,
-                            'pasante' => $pasante['nombres'] . ' ' . $pasante['apellidos'],
-                            'ci' => $pasante['ci'],
-                            'modalidad' => $proceso['modalidad']
-                        ];
+                            $mensaje = "¡SALIDA REGISTRADA! " . $pasante['nombres'] . " " . $pasante['apellidos'] . " a las $horaSalida."
+                                . ($vSalida['tope_aplicado'] ? ' (Tope de jornada 12:00 aplicado.)' : '')
+                                . " Total de hoy: $horasHoy hrs.";
+                            $tipoMensaje = 'success';
+                            $datosMarcado = [
+                                'tipo' => 'SALIDA',
+                                'hora' => $horaSalida,
+                                'hora_entrada' => $asistenciaHoy['hora_entrada'],
+                                'horas_trabajadas' => $horasHoy,
+                                'pasante' => $pasante['nombres'] . ' ' . $pasante['apellidos'],
+                                'ci' => $pasante['ci'],
+                                'modalidad' => $proceso['modalidad']
+                            ];
+                        }
                     } else {
                         // Ya completó ambas marcaciones
                         $mensaje = "El pasante " . $pasante['nombres'] . " ya completó su Entrada (" . $asistenciaHoy['hora_entrada'] . ") y Salida (" . $asistenciaHoy['hora_salida'] . ") de hoy.";

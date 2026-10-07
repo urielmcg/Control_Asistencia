@@ -159,14 +159,14 @@ CREATE TABLE IF NOT EXISTS documentos (
 -- 10. TABLA: PROCESOS (Asignación pasante - modalidad - horas)
 CREATE TABLE IF NOT EXISTS procesos (
     id_proceso INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    id_pasante INT UNSIGNED NOT NULL,
+    id_pasante INT UNSIGNED NULL,
     id_institucion INT UNSIGNED NOT NULL,
-    id_modalidad INT UNSIGNED NOT NULL,
+    id_modalidad INT UNSIGNED NULL,
     id_tutor INT UNSIGNED NULL,
     id_turno INT UNSIGNED NULL,
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE NULL,
-    horas_requeridas INT UNSIGNED NOT NULL,
+    horas_requeridas INT UNSIGNED NULL,
     estado VARCHAR(30) NOT NULL DEFAULT 'EN_CURSO',
     observacion TEXT,
     fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -379,7 +379,7 @@ SELECT
     pas.ci,
     inst.nombre AS institucion,
     car.nombre AS carrera,
-    m.nombre AS modalidad,
+    COALESCE(m.nombre, 'Pasantía') AS modalidad,
     p.horas_requeridas,
     p.estado AS estado_proceso,
     COALESCE(
@@ -454,9 +454,11 @@ SELECT
 FROM procesos p
 INNER JOIN pasantes pas ON p.id_pasante = pas.id_pasante
 INNER JOIN instituciones inst ON p.id_institucion = inst.id_institucion
-INNER JOIN modalidades m ON p.id_modalidad = m.id_modalidad
+LEFT JOIN modalidades m ON p.id_modalidad = m.id_modalidad
 INNER JOIN carreras car ON pas.id_carrera = car.id_carrera
 LEFT JOIN asistencias a ON p.id_proceso = a.id_proceso
+WHERE p.horas_requeridas IS NOT NULL AND p.horas_requeridas > 0
+  AND (m.nombre IS NULL OR m.nombre <> 'Proyecto de Grado')
 GROUP BY
     p.id_proceso,
     p.id_pasante,
@@ -503,7 +505,10 @@ INSERT IGNORE INTO carreras (id_carrera, id_universidad, nombre) VALUES
 (3, 1, 'Contaduría General'),
 (4, 2, 'Informática'),
 (5, 2, 'Ingeniería de Sistemas'),
-(6, 3, 'Ingeniería de Sistemas');
+(6, 3, 'Ingeniería de Sistemas'),
+(7, 2, 'Psicología'),
+(8, 2, 'Administración de Empresas'),
+(9, 2, 'Comunicación Social');
 
 -- Modalidades de Titulación: Proyecto de Grado y Trabajo Dirigido
 INSERT IGNORE INTO modalidades (id_modalidad, nombre, descripcion, horas_requeridas_base) VALUES
