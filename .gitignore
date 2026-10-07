@@ -8,6 +8,7 @@ odd/
 
 # Pasted screenshots / attachments
 image.png
+imagenes/
 *.png.bak
 
 # Local test leftovers (curl jars, probes, sample uploads)
