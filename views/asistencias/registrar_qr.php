@@ -286,13 +286,13 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
         <?php endif; ?>
 
-        <!-- Pestañas de Navegación del Módulo QR -->
+        <!-- Pestañas de Navegación del Módulo QR (primero el Tótem) -->
         <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; flex-wrap: wrap;">
-            <button type="button" class="btn tab-btn active" id="tabBtnScanner" onclick="cambiarTab('scanner')">
-                <i class="fa-solid fa-camera"></i> Escáner por Cámara &amp; Teclado
-            </button>
-            <button type="button" class="btn btn-outline tab-btn" id="tabBtnTotem" onclick="cambiarTab('totem')">
+            <button type="button" class="btn tab-btn active" id="tabBtnTotem" onclick="cambiarTab('totem')">
                 <i class="fa-solid fa-tv"></i> Tótem CCDB - QR del Día
+            </button>
+            <button type="button" class="btn btn-outline tab-btn" id="tabBtnScanner" onclick="cambiarTab('scanner')">
+                <i class="fa-solid fa-camera"></i> Escáner por Cámara &amp; Teclado
             </button>
             <a href="../pasantes/credencial_qr.php" class="btn btn-outline" style="margin-left: auto;">
                 <i class="fa-solid fa-id-card-clip"></i> Carnets &amp; Credenciales QR
@@ -300,7 +300,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </div>
 
         <!-- SECCIÓN 1: ESCÁNER POR CÁMARA Y MARCADO -->
-        <div id="seccionScanner">
+        <div id="seccionScanner" style="display: none;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
                 <!-- Panel de Marcado y Cámara HTML5 -->
                 <div class="card" style="text-align: center;">
@@ -405,7 +405,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </div>
 
         <!-- SECCIÓN 2: TÓTEM CCDB - QR DEL DÍA -->
-        <div id="seccionTotem" style="display: none; margin-bottom: 24px;">
+        <div id="seccionTotem" style="margin-bottom: 24px;">
             <div class="card" style="text-align: center; padding: 30px 20px;">
                 <div style="max-width: 600px; margin: 0 auto;">
                     <div class="action-icon-circle" style="margin: 0 auto 14px auto; width: 70px; height: 70px; background: #fef2f2; color: var(--primary-red);">
@@ -444,8 +444,15 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
         </div>
 
+        <!-- Hoja de impresión del Tótem: solo QR + títulos (visible únicamente al imprimir) -->
+        <div id="printTotem" style="display: none; text-align: center; padding: 40px 20px;">
+            <div id="qrcodePrint" style="display: inline-block; margin-bottom: 24px;"></div>
+            <h1 style="font-size: 2rem; font-weight: 900; letter-spacing: 2px; color: #000; margin: 0 0 8px 0;">QR DE ASISTENCIA</h1>
+            <p style="font-size: 1.1rem; font-weight: 700; letter-spacing: 1px; color: #000; margin: 0;">CENTRO CULTURAL DON BOSCO</p>
+        </div>
+
         <!-- Asistencias de la Jornada -->
-        <div class="card">
+        <div class="card" id="asistenciasHoyCard">
             <div class="card-header-flex">
                 <h3 class="card-title">
                     <i class="fa-solid fa-list-check" style="margin-right: 8px; color: var(--primary-blue);"></i>
@@ -518,6 +525,21 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #printTotem, #printTotem * {
+        visibility: visible;
+    }
+    #printTotem {
+        display: block !important;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+    }
+}
 @keyframes scanAnimation {
     0% { top: 5%; }
     50% { top: 90%; }
@@ -573,21 +595,33 @@ function cambiarTab(tab) {
     }
 }
 
-// Comprobar si vino con parámetro ?tab=totem
+// Comprobar si vino con parámetro ?tab=scanner (por defecto se muestra el Tótem)
 const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('tab') === 'totem') {
-    cambiarTab('totem');
+if (urlParams.get('tab') === 'scanner') {
+    cambiarTab('scanner');
 }
 
-// Generar QR para el Tótem
+// Generar QR para el Tótem y su copia de impresión
 document.addEventListener('DOMContentLoaded', function() {
+    const qrText = "<?= htmlspecialchars($qrTotemUrl, ENT_QUOTES) ?>";
     const qrTotemContainer = document.getElementById('qrcodeTotem');
     if (qrTotemContainer) {
         new QRCode(qrTotemContainer, {
-            text: "<?= htmlspecialchars($qrTotemUrl, ENT_QUOTES) ?>",
+            text: qrText,
             width: 220,
             height: 220,
             colorDark: "#0d3b66",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
+    const qrPrintContainer = document.getElementById('qrcodePrint');
+    if (qrPrintContainer) {
+        new QRCode(qrPrintContainer, {
+            text: qrText,
+            width: 420,
+            height: 420,
+            colorDark: "#000000",
             colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H
         });
