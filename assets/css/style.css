@@ -644,4 +644,48 @@ body {
   .progress-bar {
     min-width: 10px !important;
   }
+
+  /* Formal report look: masthead, flat sections, document footer.
+     Print-only generated content; screen views are untouched. */
+  .content-body::before {
+    display: block !important;
+    text-align: center !important;
+    font-size: 11pt !important;
+    font-weight: 800 !important;
+    letter-spacing: 1.5px !important;
+    color: #0d3b66 !important;
+    content: "CENTRO CULTURAL DON BOSCO" !important;
+    border-bottom: 2.5px double #0d3b66 !important;
+    padding-bottom: 6px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .content-body::after {
+    display: block !important;
+    text-align: center !important;
+    font-size: 8pt !important;
+    color: #64748b !important;
+    font-style: italic !important;
+    content: "Documento generado por el Sistema de Control y Seguimiento de Pasantes CCDB." !important;
+    border-top: 1px solid #94a3b8 !important;
+    padding-top: 6px !important;
+    margin-top: 14px !important;
+  }
+
+  .card {
+    border: none !important;
+    border-bottom: 1px solid #94a3b8 !important;
+    border-radius: 0 !important;
+    padding: 10px 0 !important;
+  }
+
+  .card-title, h2, h3 {
+    font-family: Georgia, "Times New Roman", serif !important;
+    color: #000000 !important;
+  }
+
+  .badge {
+    border: 1px solid currentColor !important;
+    background: #ffffff !important;
+  }
 }
