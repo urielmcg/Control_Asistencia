@@ -118,9 +118,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </div>
 
                 <!-- Barra de progreso -->
-                <div class="progress-container" style="height: 16px; margin-bottom: 12px; position: relative; background: #e2e8f0; border-radius: 999px;">
+                <div class="progress-container" style="height: 16px; margin-bottom: 12px; background: #e2e8f0; border-radius: 999px;">
                     <div class="progress-bar <?= ($porc < 50) ? 'progress-bar-warning' : '' ?>" style="width: <?= min($porc, 100) ?>%; border-radius: 999px;"></div>
-                    <div style="position: absolute; top: 50%; left: calc(<?= min(max($porc, 2), 100) ?>% - 7px); transform: translateY(-50%); width: 14px; height: 14px; border-radius: 50%; background: #f59e0b; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
                 </div>
 
                 <?php if ((float)$rep['horas_descontadas'] > 0): ?>
