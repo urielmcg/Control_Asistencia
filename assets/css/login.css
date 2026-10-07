@@ -58,8 +58,9 @@ body.login-body {
 }
 
 .login-logo {
-  width: 105px;
-  height: 105px;
+  width: 100%;
+  max-width: 290px;
+  height: auto;
   margin: 0 auto 15px auto;
   display: block;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));

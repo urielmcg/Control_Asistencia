@@ -102,12 +102,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     Recuérdame en este celular (marca directa al escanear)
                 </label>
             </form>
-
-            <div class="credentials-reminder">
-                <i class="fa-solid fa-circle-info" style="color: #0d3b66; margin-right: 6px;"></i>
-                <strong>Credenciales de demostración:</strong><br>
-                Usuario: <code>admin</code> &nbsp;|&nbsp; Contraseña: <code>Admin123</code>
-            </div>
         </div>
     </div>
 </body>
