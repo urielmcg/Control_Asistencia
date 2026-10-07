@@ -640,4 +640,8 @@ body {
     border: 1px solid #cbd5e1 !important;
     height: 14px !important;
   }
+
+  .progress-bar {
+    min-width: 10px !important;
+  }
 }
