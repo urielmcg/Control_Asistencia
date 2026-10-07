@@ -249,7 +249,7 @@ CREATE TABLE IF NOT EXISTS sanciones (
     id_sancion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     id_proceso INT UNSIGNED NOT NULL,
     id_tipo_sancion INT UNSIGNED NOT NULL,
-    registrado_por INT UNSIGNED NOT NULL,
+    registrado_por INT UNSIGNED NULL,
     fecha DATE NOT NULL,
     motivo VARCHAR(255),
     descripcion TEXT,

@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../../config/auth.php';
 Auth::requireStaff();
 require_once __DIR__ . '/../../includes/marcado.php';
+require_once __DIR__ . '/../../includes/sanciones_reglas.php';
 
 $pageTitle = 'Registro de Asistencia QR';
 $activeMenu = 'asistencias_qr';
@@ -198,6 +199,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ]);
 
                             $mensaje = "¡ENTRADA REGISTRADA! " . $pasante['nombres'] . " " . $pasante['apellidos'] . " a las $ahora.";
+                            $sancAuto = registrarSancionAtrasoAuto($db, $proceso['id_proceso'], $ahora, $hoy);
+                            if ($sancAuto) {
+                                $mensaje .= " Sanción automática: $sancAuto";
+                            }
                             $tipoMensaje = 'success';
                             $datosMarcado = [
                                 'tipo' => 'ENTRADA',

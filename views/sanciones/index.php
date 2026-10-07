@@ -88,7 +88,7 @@ $sanciones = $db->query("SELECT s.*, ts.nombre AS tipo_sancion, p.nombres, p.ape
                          INNER JOIN procesos pr ON s.id_proceso = pr.id_proceso
                          LEFT JOIN pasantes p ON pr.id_pasante = p.id_pasante
                          LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
-                         INNER JOIN usuarios u ON s.registrado_por = u.id_usuario
+                         LEFT JOIN usuarios u ON s.registrado_por = u.id_usuario
                          ORDER BY s.fecha DESC, s.id_sancion DESC")->fetchAll();
 
 // Procesos en curso para el selector (puros, TD y PG, vinculados o no)
@@ -248,7 +248,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                             <strong style="color: #dc2626; font-size: 0.95rem;">-<?= $s['horas_descontadas'] ?> hrs</strong>
                                         </td>
                                         <td>
-                                            <span class="badge badge-secondary"><?= htmlspecialchars($s['registrado_por_usuario']) ?></span>
+                                            <span class="badge badge-secondary"><?= htmlspecialchars($s['registrado_por_usuario'] ?? 'Sistema') ?></span>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

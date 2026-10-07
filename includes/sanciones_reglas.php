@@ -75,3 +75,56 @@ function fechaEntregaSancion(DateTime $fecha, $exceso) {
     $d = clone $fecha;
     return $d->modify('next monday')->format('Y-m-d');
 }
+
+/**
+ * Automatically registers an ATRASO sanction when entry is late.
+ * Late = minutes past 09:00 (floor). On-time entries return null.
+ * Skips when an ATRASO sanction already exists for the process and date.
+ *
+ * @return string|null Human-readable summary of the created sanction.
+ */
+function registrarSancionAtrasoAuto($db, $idProceso, $horaEntrada, $fecha) {
+    $ref = strtotime('09:00:00');
+    $ent = strtotime($horaEntrada);
+    if ($ent === false || $ent <= $ref) {
+        return null;
+    }
+    $minutos = (int)floor(($ent - $ref) / 60);
+    if ($minutos < 1) {
+        return null;
+    }
+
+    $stmtT = $db->prepare("SELECT id_tipo_sancion FROM tipos_sancion WHERE nombre = 'ATRASO' LIMIT 1");
+    $stmtT->execute();
+    $idTipo = $stmtT->fetchColumn();
+    if (!$idTipo) {
+        return null;
+    }
+
+    $stmtDup = $db->prepare("SELECT COUNT(*) FROM sanciones WHERE id_proceso = :id AND fecha = :fecha AND id_tipo_sancion = :tipo");
+    $stmtDup->execute([':id' => $idProceso, ':fecha' => $fecha, ':tipo' => $idTipo]);
+    if ((int)$stmtDup->fetchColumn() > 0) {
+        return null;
+    }
+
+    $stmtReinc = $db->prepare("SELECT COUNT(*) FROM sanciones WHERE id_proceso = :id AND id_tipo_sancion = :tipo");
+    $stmtReinc->execute([':id' => $idProceso, ':tipo' => $idTipo]);
+    $reincidencia = (int)$stmtReinc->fetchColumn() + 1;
+
+    $regla = reglaAtraso($minutos, $reincidencia);
+    $stmtIns = $db->prepare("INSERT INTO sanciones (id_proceso, id_tipo_sancion, registrado_por, fecha, motivo, horas_descontadas, minutos, reincidencia, material, sorteo, fecha_entrega, estado)
+                             VALUES (:proc, :tipo, NULL, :fecha, :motivo, 0, :min, :reinc, :mat, :sort, :ent, 'ACTIVA')");
+    $stmtIns->execute([
+        ':proc'  => $idProceso,
+        ':tipo'  => $idTipo,
+        ':fecha' => $fecha,
+        ':motivo'=> "Atraso automático: entrada $horaEntrada ($minutos min tarde).",
+        ':min'   => $minutos,
+        ':reinc' => $reincidencia,
+        ':mat'   => $regla['material'],
+        ':sort'  => $regla['sorteo'],
+        ':ent'   => fechaEntregaSancion(new DateTime($fecha), $regla['exceso']),
+    ]);
+
+    return "Atraso de $minutos min: " . $regla['material'];
+}
