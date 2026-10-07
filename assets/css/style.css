@@ -754,5 +754,6 @@ body {
     margin-top: 10px !important;
   }
 }
-. p r i n t - r e p o r t   {   d i s p l a y :   n o n e ;   }  
- 
+
+/* Print-only report table: hidden on screen */
+.print-report { display: none; }
