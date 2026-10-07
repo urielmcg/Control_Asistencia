@@ -559,6 +559,23 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         break-inside: avoid !important;
         margin: 20px auto !important;
     }
+
+    /* Forzar que el encabezado imprima igual que en pantalla */
+    .carnet-header,
+    .carnet-header-bg,
+    .carnet-stripe,
+    .carnet-logo-box,
+    .carnet-avatar,
+    .carnet-badge-status,
+    .carnet-ci-tag,
+    .carnet-footer {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .carnet-inst-text h3 {
+        color: #ffffff !important;
+    }
 }
 </style>
 
