@@ -4,6 +4,7 @@
  */
 require_once __DIR__ . '/../../config/auth.php';
 Auth::requireStaff();
+require_once __DIR__ . '/../../includes/sanciones_reglas.php';
 
 $pageTitle = 'Sanciones y Descuentos';
 $activeMenu = 'sanciones';
@@ -19,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $fecha = trim($_POST['fecha'] ?? date('Y-m-d'));
     $motivo = trim($_POST['motivo'] ?? '');
     $horas_descontadas = (float)($_POST['horas_descontadas'] ?? 0);
+    $minutos = (int)($_POST['minutos'] ?? 0);
     $descripcion = trim($_POST['descripcion'] ?? '');
     $currentUser = Auth::user();
 
@@ -26,20 +28,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $error = 'Por favor complete todos los datos requeridos e ingrese un valor de descuento válido.';
     } else {
         try {
-            $stmt = $db->prepare("INSERT INTO sanciones (id_proceso, id_tipo_sancion, registrado_por, fecha, motivo, descripcion, horas_descontadas, estado)
-                                  VALUES (:id_proceso, :id_tipo_sancion, :reg_por, :fecha, :motivo, :descripcion, :horas, 'ACTIVA')");
+            $stmtTipo = $db->prepare("SELECT nombre FROM tipos_sancion WHERE id_tipo_sancion = :id");
+            $stmtTipo->execute([':id' => $id_tipo_sancion]);
+            $tipoNombre = $stmtTipo->fetchColumn();
+
+            $material = null;
+            $sorteo = null;
+            $reincidencia = null;
+            $fecha_entrega = null;
+
+            if ($tipoNombre === 'ATRASO') {
+                if ($minutos < 1) {
+                    throw new Exception('Indique los minutos de atraso.');
+                }
+                $stmtReinc = $db->prepare("SELECT COUNT(*) FROM sanciones s
+                                           INNER JOIN tipos_sancion t ON s.id_tipo_sancion = t.id_tipo_sancion
+                                           WHERE s.id_proceso = :id AND t.nombre = 'ATRASO'");
+                $stmtReinc->execute([':id' => $id_proceso]);
+                $reincidencia = (int)$stmtReinc->fetchColumn() + 1;
+                $regla = reglaAtraso($minutos, $reincidencia);
+                $material = $regla['material'];
+                $sorteo = $regla['sorteo'];
+                $fecha_entrega = fechaEntregaSancion(new DateTime($fecha), $regla['exceso']);
+            } elseif ($tipoNombre === 'FALTA') {
+                $material = 'Impresión/empaste de folio digital (no repone horas; debe completar su tiempo).';
+                $horas_descontadas = 0;
+                $fecha_entrega = fechaEntregaSancion(new DateTime($fecha), false);
+            }
+
+            $stmt = $db->prepare("INSERT INTO sanciones (id_proceso, id_tipo_sancion, registrado_por, fecha, motivo, descripcion, horas_descontadas, minutos, reincidencia, material, sorteo, fecha_entrega, estado)
+                                  VALUES (:id_proceso, :id_tipo_sancion, :reg_por, :fecha, :motivo, :descripcion, :horas, :min, :reinc, :mat, :sort, :ent, 'ACTIVA')");
             $stmt->execute([
                 ':id_proceso'       => $id_proceso,
                 ':id_tipo_sancion'  => $id_tipo_sancion,
                 ':reg_por'          => $currentUser['id'],
                 ':fecha'            => $fecha,
                 ':motivo'           => $motivo,
-                ':descripcion'      => $descripcion ?: null,
-                ':horas'            => $horas_descontadas
+                ':descripcion'       => $descripcion ?: null,
+                ':horas'            => $horas_descontadas,
+                ':min'              => $minutos > 0 ? $minutos : null,
+                ':reinc'            => $reincidencia,
+                ':mat'              => $material,
+                ':sort'             => $sorteo,
+                ':ent'              => $fecha_entrega
             ]);
 
-            Auth::logAudit('REGISTRAR_SANCION', 'sanciones', $db->lastInsertId(), "Sanción aplicada: Proceso $id_proceso, Descuento: $horas_descontadas hrs");
-            $success = "Sanción registrada correctamente. Se han descontado $horas_descontadas hrs del proceso.";
+            Auth::logAudit('REGISTRAR_SANCION', 'sanciones', $db->lastInsertId(), "Sanción $tipoNombre: Proceso $id_proceso" . ($material ? ", Material: $material" : ''));
+            $success = 'Sanción registrada correctamente.' . ($material ? " Material: $material" : '') . ($fecha_entrega ? " Entregar hasta el $fecha_entrega." : '');
         } catch (Exception $e) {
             $error = 'Error al registrar sanción: ' . $e->getMessage();
         }
@@ -125,6 +160,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </div>
 
                     <div class="form-group">
+                        <label for="minutos">Minutos de atraso (solo ATRASO)</label>
+                        <input type="number" min="1" max="120" name="minutos" id="minutos" class="form-control" value="" placeholder="1-10 cómputo, más es exceso">
+                        <small style="color: var(--text-muted); font-size: 0.78rem;">El material y la reincidencia se calculan solos.</small>
+                    </div>
+
+                    <div class="form-group">
                         <label for="horas_descontadas">Horas a Descontar *</label>
                         <input type="number" step="0.5" min="0" max="100" name="horas_descontadas" id="horas_descontadas" class="form-control" value="2.0" required>
                         <small style="color: var(--text-muted); font-size: 0.78rem;">Se restarán automáticamente del avance total de horas.</small>
@@ -192,6 +233,15 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                             <div><?= htmlspecialchars($s['motivo']) ?></div>
                                             <?php if (!empty($s['descripcion'])): ?>
                                                 <small style="color: var(--text-muted);"><?= htmlspecialchars($s['descripcion']) ?></small>
+                                            <?php endif; ?>
+                                            <?php if (!empty($s['material'])): ?>
+                                                <div style="font-size: 0.8rem; margin-top: 4px;"><strong>Material:</strong> <?= htmlspecialchars($s['material']) ?></div>
+                                            <?php endif; ?>
+                                            <?php if (!empty($s['sorteo'])): ?>
+                                                <div style="margin-top: 4px;"><span class="badge badge-warning">SORTEO <?= htmlspecialchars($s['sorteo']) ?></span></div>
+                                            <?php endif; ?>
+                                            <?php if (!empty($s['fecha_entrega'])): ?>
+                                                <small style="color: var(--text-muted);">Entregar hasta el <?= htmlspecialchars(date('d/m/Y', strtotime($s['fecha_entrega']))) ?></small>
                                             <?php endif; ?>
                                         </td>
                                         <td>
