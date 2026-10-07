@@ -167,7 +167,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     <td><strong><?= htmlspecialchars(date('d/m/Y', strtotime($as['fecha']))) ?></strong></td>
                                     <td><?= htmlspecialchars($as['ci']) ?></td>
                                     <td><strong><?= htmlspecialchars($as['nombres'] . ' ' . $as['apellidos']) ?></strong></td>
-                                    <td><?= htmlspecialchars($as['modalidad']) ?></td>
+                                    <td><?= htmlspecialchars($as['modalidad'] ?? 'Pasantía') ?></td>
                                     <td><span class="badge badge-success"><?= htmlspecialchars($as['hora_entrada'] ?? '-') ?></span></td>
                                     <td>
                                         <?php if (!empty($as['hora_salida'])): ?>

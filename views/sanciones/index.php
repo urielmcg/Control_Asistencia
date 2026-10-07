@@ -196,7 +196,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <label for="id_tipo_sancion">Tipo de Falta / Sanción *</label>
                         <select name="id_tipo_sancion" id="id_tipo_sancion" class="form-control" required>
                             <?php foreach ($tiposSancion as $ts): ?>
-                                <option value="<?= $ts['id_tipo_sancion'] ?>"><?= htmlspecialchars($ts['nombre']) ?> - <?= htmlspecialchars($ts['descripcion']) ?></option>
+                                <option value="<?= $ts['id_tipo_sancion'] ?>"><?= htmlspecialchars($ts['nombre']) ?> - <?= htmlspecialchars($ts['descripcion'] ?? '') ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>

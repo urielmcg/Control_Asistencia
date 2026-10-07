@@ -137,7 +137,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <label for="id_rol">Rol en el Sistema *</label>
                         <select name="id_rol" id="id_rol" class="form-control" required>
                             <?php foreach ($roles as $r): ?>
-                                <option value="<?= $r['id_rol'] ?>"><?= htmlspecialchars($r['nombre']) ?> - <?= htmlspecialchars($r['descripcion']) ?></option>
+                                <option value="<?= $r['id_rol'] ?>"><?= htmlspecialchars($r['nombre']) ?> - <?= htmlspecialchars($r['descripcion'] ?? '') ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
