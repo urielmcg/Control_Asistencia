@@ -179,11 +179,25 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     <td><?= htmlspecialchars($u['nombres'] . ' ' . $u['apellidos']) ?></td>
                                     <td><?= htmlspecialchars($u['ci']) ?></td>
                                     <td>
-                                        <span class="badge <?= ($u['rol_nombre'] === 'ADMINISTRADOR') ? 'badge-danger' : 'badge-info' ?>">
-                                            <?= htmlspecialchars($u['rol_nombre']) ?>
-                                        </span>
-                                        <?php if ($u['rol_nombre'] === 'PASANTE' && !empty($tracks[$u['ci']])): ?>
-                                            <br><small style="color: var(--text-muted);"><?= htmlspecialchars(implode(' · ', array_unique($tracks[$u['ci']]))) ?></small>
+                                        <?php if ($u['rol_nombre'] === 'ADMINISTRADOR'): ?>
+                                            <span class="badge badge-danger">ADMINISTRADOR</span>
+                                        <?php elseif ($u['rol_nombre'] === 'PERSONAL'): ?>
+                                            <span class="badge badge-info">PERSONAL</span>
+                                        <?php else: ?>
+                                            <?php $utr = array_unique($tracks[$u['ci']] ?? []); ?>
+                                            <?php if (empty($utr)): ?>
+                                                <span class="badge badge-secondary">PASANTE</span>
+                                            <?php else: ?>
+                                                <?php foreach ($utr as $t): ?>
+                                                    <?php if ($t === 'Trabajo Dirigido'): ?>
+                                                        <span class="badge badge-success">TRABAJO DIRIGIDO</span>
+                                                    <?php elseif ($t === 'Proyecto de Grado'): ?>
+                                                        <span class="badge badge-info">PROYECTO DE GRADO</span>
+                                                    <?php else: ?>
+                                                        <span class="badge badge-secondary">PASANTE</span>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
                                         <?php endif; ?>
                                     </td>
                                     <td>

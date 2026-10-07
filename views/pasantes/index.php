@@ -18,7 +18,9 @@ $sql = "SELECT p.*, i.nombre AS institucion, c.nombre AS carrera,
         FROM pasantes p
         INNER JOIN instituciones i ON p.id_universidad = i.id_institucion
         INNER JOIN carreras c ON p.id_carrera = c.id_carrera
-        WHERE 1=1 ";
+        WHERE 1=1
+          AND NOT EXISTS (SELECT 1 FROM procesos pr2 INNER JOIN modalidades m2 ON pr2.id_modalidad = m2.id_modalidad
+                          WHERE pr2.id_pasante = p.id_pasante AND pr2.estado = 'EN_CURSO') ";
 
 $params = [];
 
