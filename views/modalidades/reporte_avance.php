@@ -96,30 +96,31 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;">
-                    <div style="background: #f8fafc; border-top: 3px solid var(--primary-blue); border-radius: 0 0 8px 8px; padding: 12px 14px;">
-                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.6px; white-space: nowrap;">MODALIDAD</div>
-                        <div style="font-size: 1.05rem; font-weight: 800; color: #1e293b; margin-top: 4px;"><?= htmlspecialchars($rep['modalidad']) ?></div>
+                    <div style="background: #f8fafc; border-radius: 8px; padding: 12px 14px;">
+                        <div style="font-size: 0.72rem; color: #64748b; font-weight: 600;">MODALIDAD</div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-top: 4px;"><?= htmlspecialchars($rep['modalidad']) ?></div>
                     </div>
 
-                    <div style="background: #f8fafc; border-top: 3px solid #64748b; border-radius: 0 0 8px 8px; padding: 12px 14px;">
-                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.6px; white-space: nowrap;">HORAS REQUERIDAS</div>
-                        <div style="font-size: 1.05rem; font-weight: 800; color: #1e293b; margin-top: 4px;"><?= $rep['horas_requeridas'] ?> <small style="font-size: 0.8rem; font-weight: 600;">hrs</small></div>
+                    <div style="background: #f8fafc; border-radius: 8px; padding: 12px 14px;">
+                        <div style="font-size: 0.72rem; color: #64748b; font-weight: 600;">HORAS REQUERIDAS</div>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-top: 4px;"><?= $rep['horas_requeridas'] ?> hrs</div>
                     </div>
 
-                    <div style="background: #f0fdf4; border-top: 3px solid #16a34a; border-radius: 0 0 8px 8px; padding: 12px 14px;">
-                        <div style="font-size: 0.7rem; color: #15803d; font-weight: 700; letter-spacing: 0.6px; white-space: nowrap;">HORAS ACUMULADAS</div>
-                        <div style="font-size: 1.25rem; font-weight: 800; color: #166534; margin-top: 4px;"><?= $rep['horas_acumuladas'] ?> <small style="font-size: 0.8rem; font-weight: 600;">hrs</small></div>
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 14px;">
+                        <div style="font-size: 0.72rem; color: #15803d; font-weight: 600;">HORAS ACUMULADAS</div>
+                        <div style="font-size: 1.05rem; font-weight: 800; color: #15803d; margin-top: 4px;"><?= $rep['horas_acumuladas'] ?> hrs</div>
                     </div>
 
-                    <div style="background: #fef2f2; border-top: 3px solid #dc2626; border-radius: 0 0 8px 8px; padding: 12px 14px;">
-                        <div style="font-size: 0.7rem; color: #b91c1c; font-weight: 700; letter-spacing: 0.6px; white-space: nowrap;">HORAS FALTANTES</div>
-                        <div style="font-size: 1.25rem; font-weight: 800; color: #dc2626; margin-top: 4px;"><?= $rep['horas_faltantes'] ?> <small style="font-size: 0.8rem; font-weight: 600;">hrs</small></div>
+                    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 14px;">
+                        <div style="font-size: 0.72rem; color: #b91c1c; font-weight: 600;">HORAS FALTANTES</div>
+                        <div style="font-size: 1.05rem; font-weight: 800; color: #dc2626; margin-top: 4px;"><?= $rep['horas_faltantes'] ?> hrs</div>
                     </div>
                 </div>
 
                 <!-- Barra de progreso -->
-                <div class="progress-container" style="height: 20px; margin-bottom: 12px;">
-                    <div class="progress-bar <?= ($porc < 50) ? 'progress-bar-warning' : '' ?>" style="width: <?= min($porc, 100) ?>%;"></div>
+                <div class="progress-container" style="height: 16px; margin-bottom: 12px; position: relative; background: #e2e8f0; border-radius: 999px;">
+                    <div class="progress-bar <?= ($porc < 50) ? 'progress-bar-warning' : '' ?>" style="width: <?= min($porc, 100) ?>%; border-radius: 999px;"></div>
+                    <div style="position: absolute; top: 50%; left: calc(<?= min(max($porc, 2), 100) ?>% - 7px); transform: translateY(-50%); width: 14px; height: 14px; border-radius: 50%; background: #f59e0b; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
                 </div>
 
                 <?php if ((float)$rep['horas_descontadas'] > 0): ?>
