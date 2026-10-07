@@ -130,6 +130,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </div>
 
         <?php foreach ($gruposHoras as $tituloGrupo => $grupo): ?>
+            <?php if (empty($grupo)) { continue; } ?>
             <h3 class="no-print" style="font-size: 1.05rem; font-weight: 800; color: var(--primary-blue); margin: 8px 0 16px 0;"><?= htmlspecialchars($tituloGrupo) ?></h3>
         <?php foreach ($grupo as $rep): ?>
             <?php 
@@ -195,6 +196,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <?php endforeach; ?>
         <?php endforeach; ?>
 
+        <?php if (!empty($pgRows)): ?>
         <h3 class="no-print" style="font-size: 1.05rem; font-weight: 800; color: var(--primary-blue); margin: 8px 0 16px 0;">Proyecto de Grado — presencia por días</h3>
         <div class="card" style="margin-bottom: 24px;">
             <div class="table-responsive">
@@ -232,6 +234,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </table>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Versión tabular solo para impresión/PDF (invisible en pantalla) -->
         <div class="print-report">
@@ -241,6 +244,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <p><strong>Fecha del reporte:</strong> <?= date('d/m/Y') ?></p>
             </div>
             <?php foreach ($gruposHoras as $tituloGrupo => $grupo): ?>
+            <?php if (empty($grupo)) { continue; } ?>
             <h3><?= htmlspecialchars($tituloGrupo) ?></h3>
             <table class="print-table">
                 <thead>
@@ -274,6 +278,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </table>
             <?php endforeach; ?>
 
+            <?php if (!empty($pgRows)): ?>
             <h3 style="margin-top: 14px;">Proyecto de Grado — presencia por días</h3>
             <table class="print-table">
                 <thead>
@@ -299,6 +304,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            <?php endif; ?>
             <p class="print-foot">Documento generado por el Sistema de Control y Seguimiento de Pasantes CCDB.</p>
         </div>
     </main>
