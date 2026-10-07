@@ -110,7 +110,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         </div>
 
         <?php foreach ($gruposHoras as $tituloGrupo => $grupo): ?>
-            <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--primary-blue); margin: 8px 0 16px 0;"><?= htmlspecialchars($tituloGrupo) ?></h3>
+            <h3 class="no-print" style="font-size: 1.05rem; font-weight: 800; color: var(--primary-blue); margin: 8px 0 16px 0;"><?= htmlspecialchars($tituloGrupo) ?></h3>
         <?php foreach ($grupo as $rep): ?>
             <?php 
                 $porc = (float)$rep['porcentaje_completado'];
@@ -175,7 +175,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <?php endforeach; ?>
         <?php endforeach; ?>
 
-        <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--primary-blue); margin: 8px 0 16px 0;">Proyecto de Grado — presencia por días</h3>
+        <h3 class="no-print" style="font-size: 1.05rem; font-weight: 800; color: var(--primary-blue); margin: 8px 0 16px 0;">Proyecto de Grado — presencia por días</h3>
         <div class="card" style="margin-bottom: 24px;">
             <div class="table-responsive">
                 <table class="table-custom">
@@ -220,6 +220,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <p>Documento oficial de control de cumplimiento con miras a la emisión de certificados CCDB.</p>
                 <p><strong>Fecha del reporte:</strong> <?= date('d/m/Y') ?></p>
             </div>
+            <?php foreach ($gruposHoras as $tituloGrupo => $grupo): ?>
+            <h3><?= htmlspecialchars($tituloGrupo) ?></h3>
             <table class="print-table">
                 <thead>
                     <tr>
@@ -232,10 +234,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($gruposHoras as $tituloGrupo => $grupo): ?>
-                        <tr>
-                            <td colspan="6" style="background: #e2e8f0; font-weight: 800;"><?= htmlspecialchars($tituloGrupo) ?></td>
-                        </tr>
                         <?php foreach ($grupo as $rep): ?>
                         <tr>
                             <td>
@@ -252,9 +250,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <td><?= $rep['porcentaje_completado'] ?>%</td>
                         </tr>
                         <?php endforeach; ?>
-                    <?php endforeach; ?>
                 </tbody>
             </table>
+            <?php endforeach; ?>
 
             <h3 style="margin-top: 14px;">Proyecto de Grado — presencia por días</h3>
             <table class="print-table">
