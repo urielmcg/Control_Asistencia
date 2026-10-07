@@ -10,8 +10,12 @@ $pageTitle = 'Reporte de Avance y Certificación';
 $activeMenu = 'reportes';
 $db = Database::getConnection();
 
-// Filtro por pasante específico
+// Filtro por pasante específico y por track
 $id_pasante = isset($_GET['id_pasante']) ? (int)$_GET['id_pasante'] : 0;
+$trackFiltro = $_GET['track'] ?? 'todos';
+if (!in_array($trackFiltro, ['todos', 'pasantes', 'td', 'pg'], true)) {
+    $trackFiltro = 'todos';
+}
 
 $sql = "SELECT v.*, pas.telefono, pas.correo, pas.semestre
         FROM vista_horas_proceso v
@@ -67,6 +71,17 @@ foreach ($stmtPg->fetchAll() as $g) {
     $pgRows[] = $g;
 }
 
+// Track filter applies to screen and print alike
+if ($trackFiltro === 'pasantes') {
+    $gruposHoras = ['Pasantes' => $gruposHoras['Pasantes']];
+    $pgRows = [];
+} elseif ($trackFiltro === 'td') {
+    $gruposHoras = ['Trabajo Dirigido' => $gruposHoras['Trabajo Dirigido']];
+    $pgRows = [];
+} elseif ($trackFiltro === 'pg') {
+    $gruposHoras = [];
+}
+
 $listaPasantes = $db->query("SELECT id_pasante, nombres, apellidos, ci FROM pasantes ORDER BY apellidos ASC")->fetchAll();
 
 require_once __DIR__ . '/../../includes/header.php';
@@ -92,8 +107,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </div>
             </div>
 
-            <!-- Selector de pasante para filtrar reporte -->
-            <form method="GET" action="reporte_avance.php" style="display: flex; gap: 10px; align-items: center;" class="no-print">
+            <!-- Selector de pasante y track para filtrar reporte -->
+            <form method="GET" action="reporte_avance.php" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;" class="no-print">
                 <label style="font-weight: 700; font-size: 0.85rem; color: #475569;">Filtrar por estudiante:</label>
                 <select name="id_pasante" class="form-control" style="max-width: 320px;" onchange="this.form.submit()">
                     <option value="0">-- Todos los Estudiantes en Proceso --</option>
@@ -103,7 +118,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <?php if ($id_pasante > 0): ?>
+                <select name="track" class="form-control" style="max-width: 220px;" onchange="this.form.submit()">
+                    <?php foreach (['todos' => '-- Todos --', 'pasantes' => 'Pasantes', 'td' => 'Trabajo Dirigido', 'pg' => 'Proyecto de Grado'] as $tk => $tl): ?>
+                        <option value="<?= $tk ?>" <?= ($trackFiltro === $tk) ? 'selected' : '' ?>><?= $tl ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <?php if ($id_pasante > 0 || $trackFiltro !== 'todos'): ?>
                     <a href="reporte_avance.php" class="btn btn-outline btn-sm">Ver Todos</a>
                 <?php endif; ?>
             </form>
