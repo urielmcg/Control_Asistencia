@@ -21,7 +21,8 @@ $stmtSol = $db->prepare("SELECT pr.*, p.nombres, p.apellidos, p.ci, p.id_pasante
                                 i.nombre AS institucion, c.nombre AS carrera,
                                 m.nombre AS modalidad,
                                 t.nombre AS tutor,
-                                tu.nombre AS turno_nombre, tu.hora_inicio AS turno_ini, tu.hora_fin AS turno_fin
+                                tu.nombre AS turno_nombre, tu.hora_inicio AS turno_ini, tu.hora_fin AS turno_fin,
+                                s.postulante AS sol_postulante
                          FROM procesos pr
                          LEFT JOIN pasantes p ON pr.id_pasante = p.id_pasante
                          INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
@@ -29,6 +30,7 @@ $stmtSol = $db->prepare("SELECT pr.*, p.nombres, p.apellidos, p.ci, p.id_pasante
                          LEFT JOIN carreras c ON p.id_carrera = c.id_carrera
                          LEFT JOIN tutores t ON pr.id_tutor = t.id_tutor
                          LEFT JOIN turnos tu ON pr.id_turno = tu.id_turno
+                         LEFT JOIN solicitudes_modalidad s ON s.id_proceso = pr.id_proceso
                          WHERE " . ($tab === 'activas' ? "pr.estado = 'EN_CURSO'" : "pr.estado <> 'EN_CURSO'") . "
                          ORDER BY pr.id_proceso DESC");
 $stmtSol->execute();
@@ -170,8 +172,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         </span>
                                     </td>
                                     <td>
-                                        <?php if (!empty($sol['id_pasante'])): ?>
-                                            <?= htmlspecialchars(($sol['nombres'] ?? '') . ' ' . ($sol['apellidos'] ?? '')) ?>
+                                        <?php $nombrePost = !empty($sol['sol_postulante']) ? $sol['sol_postulante'] : trim(($sol['nombres'] ?? '') . ' ' . ($sol['apellidos'] ?? '')); ?>
+                                        <?php if ($nombrePost !== ''): ?>
+                                            <?= htmlspecialchars($nombrePost) ?>
                                         <?php else: ?>
                                             <span style="color: var(--text-muted); font-style: italic;">Registro independiente</span>
                                         <?php endif; ?>
