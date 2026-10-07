@@ -75,10 +75,12 @@ class Auth {
     }
 
     /**
-     * Whether the current user logs in with the intern role.
+     * Whether the current user logs in with a limited role
+     * (PASANTE, TRABAJO DIRIGIDO or PROYECTO DE GRADO).
      */
     public static function isPasante() {
-        return self::check() && (($_SESSION['user_role_name'] ?? '') === 'PASANTE');
+        return self::check() && in_array(($_SESSION['user_role_name'] ?? ''),
+            ['PASANTE', 'TRABAJO DIRIGIDO', 'PROYECTO DE GRADO'], true);
     }
 
     /**

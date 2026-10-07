@@ -511,8 +511,9 @@ GROUP BY
 -- Roles del sistema
 INSERT IGNORE INTO roles (id_rol, nombre, descripcion) VALUES
 (1, 'ADMINISTRADOR', 'Administrador general del sistema con control total'),
-(2, 'PERSONAL', 'Personal administrativo o tutor institucional'),
-(3, 'PASANTE', 'Usuario correspondiente al pasante');
+(3, 'PASANTE', 'Usuario correspondiente al pasante'),
+(4, 'TRABAJO DIRIGIDO', 'Usuario de modalidad Trabajo Dirigido'),
+(5, 'PROYECTO DE GRADO', 'Usuario de modalidad Proyecto de Grado');
 
 -- Usuario administrador inicial: admin / Admin123
 INSERT IGNORE INTO usuarios (id_usuario, id_rol, usuario, password, nombres, apellidos, ci, correo, telefono, estado) VALUES

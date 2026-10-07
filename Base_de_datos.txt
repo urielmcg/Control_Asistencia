@@ -648,9 +648,10 @@ CREATE INDEX idx_auditoria_fecha
 INSERT INTO roles
 (nombre, descripcion)
 VALUES
-('ADMINISTRADOR', 'Administrador general del sistema'),
-('PERSONAL', 'Personal administrativo autorizado'),
-('PASANTE', 'Usuario correspondiente a un pasante');
+ ('ADMINISTRADOR', 'Administrador general del sistema'),
+ ('PASANTE', 'Usuario correspondiente a un pasante'),
+ ('TRABAJO DIRIGIDO', 'Usuario de modalidad Trabajo Dirigido'),
+ ('PROYECTO DE GRADO', 'Usuario de modalidad Proyecto de Grado');
 
 
 -- TIPOS DE INSTITUCIÓN
