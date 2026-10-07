@@ -14,8 +14,7 @@ $q = trim($_GET['q'] ?? '');
 $estadoFiltro = trim($_GET['estado'] ?? '');
 
 $sql = "SELECT p.*, i.nombre AS institucion, c.nombre AS carrera,
-               (SELECT pr.estado FROM procesos pr WHERE pr.id_pasante = p.id_pasante ORDER BY pr.id_proceso DESC LIMIT 1) AS estado_proceso,
-               (SELECT COALESCE(m.nombre, 'Pasantía') FROM procesos pr LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad WHERE pr.id_pasante = p.id_pasante ORDER BY pr.id_proceso DESC LIMIT 1) AS modalidad_actual
+               (SELECT pr.estado FROM procesos pr WHERE pr.id_pasante = p.id_pasante ORDER BY pr.id_proceso DESC LIMIT 1) AS estado_proceso
         FROM pasantes p
         INNER JOIN instituciones i ON p.id_universidad = i.id_institucion
         INNER JOIN carreras c ON p.id_carrera = c.id_carrera
@@ -109,7 +108,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <th>Pasante</th>
                             <th>Universidad / Instituto</th>
                             <th>Carrera</th>
-                            <th>Modalidad Actual</th>
                             <th>Contacto</th>
                             <th>Estado</th>
                             <th>Acciones</th>
@@ -118,7 +116,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <tbody>
                         <?php if (empty($pasantes)): ?>
                             <tr>
-                                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 35px;">
+                                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 35px;">
                                     No se encontraron pasantes con los criterios de búsqueda especificados.
                                 </td>
                             </tr>
@@ -132,13 +130,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     </td>
                                     <td><?= htmlspecialchars($pas['institucion']) ?></td>
                                     <td><?= htmlspecialchars($pas['carrera']) ?></td>
-                                    <td>
-                                        <?php if (!empty($pas['modalidad_actual'])): ?>
-                                            <span class="badge badge-info"><?= htmlspecialchars($pas['modalidad_actual']) ?></span>
-                                        <?php else: ?>
-                                            <span style="font-size: 0.8rem; color: var(--text-muted);">Sin modalidad</span>
-                                        <?php endif; ?>
-                                    </td>
                                     <td>
                                         <div style="font-size: 0.82rem;"><i class="fa-solid fa-envelope" style="color:#94a3b8;"></i> <?= htmlspecialchars($pas['correo'] ?? '-') ?></div>
                                         <div style="font-size: 0.82rem;"><i class="fa-solid fa-phone" style="color:#94a3b8;"></i> <?= htmlspecialchars($pas['telefono'] ?? '-') ?></div>
@@ -159,9 +150,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                             </a>
                                             <a href="editar.php?id=<?= $pas['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Editar">
                                                 <i class="fa-solid fa-pen-to-square"></i>
-                                            </a>
-                                            <a href="../modalidades/asignar.php?id_pasante=<?= $pas['id_pasante'] ?>" class="btn btn-primary btn-sm" title="Asignar Modalidad">
-                                                <i class="fa-solid fa-graduation-cap"></i>
                                             </a>
                                             <a href="../asistencias/historial.php?id_pasante=<?= $pas['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Ver Asistencias">
                                                 <i class="fa-solid fa-calendar-days"></i>

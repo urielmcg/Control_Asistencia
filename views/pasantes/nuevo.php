@@ -13,7 +13,7 @@ $error = '';
 
 // Required documents: field name => [type, label, required]
 $docFields = [
-    'doc_carta'   => ['tipo' => 'carta_solicitud',   'label' => 'Carta de solicitud de modalidad',  'required' => true],
+    'doc_carta'   => ['tipo' => 'carta_solicitud',   'label' => 'Carta de solicitud',  'required' => true],
     'doc_ci'      => ['tipo' => 'fotocopia_ci',      'label' => 'Fotocopia de cédula vigente',      'required' => true],
     'doc_egreso'  => ['tipo' => 'certificado_egreso','label' => 'Certificado de egreso o equivalente','required' => true],
     'doc_cv'      => ['tipo' => 'cv',                'label' => 'Currículum vitae documentado',     'required' => true],
@@ -38,7 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $usuario_acceso = trim($_POST['usuario_acceso'] ?? '');
     $password = $_POST['password'] ?? '';
     $fecha_nacimiento = trim($_POST['fecha_nacimiento'] ?? '');
-    $id_modalidad = (int)($_POST['id_modalidad'] ?? 0);
     $fecha_inicio = trim($_POST['fecha_inicio'] ?? '');
     $fecha_fin = trim($_POST['fecha_fin'] ?? '');
     $direccion = trim($_POST['direccion'] ?? '');
@@ -318,7 +317,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </p>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="doc_carta">1. Carta de solicitud de modalidad *</label>
+                        <label for="doc_carta">1. Carta de solicitud *</label>
                         <input type="file" id="doc_carta" name="doc_carta" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
                         <small style="color: var(--text-muted);">Dirigida al Director General e indicando los datos de postulación anteriores.</small>
                     </div>
@@ -330,7 +329,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <div class="form-group">
                         <label for="doc_egreso">3. Certificado de egreso o equivalente *</label>
                         <input type="file" id="doc_egreso" name="doc_egreso" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
-                        <small style="color: var(--text-muted);">Debe acreditar que puede realizar su modalidad de titulación.</small>
+                        <small style="color: var(--text-muted);">Debe acreditar que puede realizar su pasantía.</small>
                     </div>
                     <div class="form-group">
                         <label for="doc_cv">4. Currículum vitae documentado *</label>
