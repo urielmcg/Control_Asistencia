@@ -79,6 +79,14 @@ $isStaff = Auth::isStaff();
             </a>
         </li>
         <?php endif; ?>
+        <?php if (!$isStaff): ?>
+        <li>
+            <a href="<?= APP_ROOT ?>views/sanciones/index.php" class="<?= ($activeMenu === 'sanciones') ? 'active' : '' ?>">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Mis Sanciones</span>
+            </a>
+        </li>
+        <?php endif; ?>
 
         <?php if ($currentUser && $currentUser['rol_name'] === 'ADMINISTRADOR'): ?>
         <div class="sidebar-heading">Administración</div>

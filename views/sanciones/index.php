@@ -3,8 +3,10 @@
  * Gestión de Sanciones y Atrasos
  */
 require_once __DIR__ . '/../../config/auth.php';
-Auth::requireStaff();
+Auth::requireLogin();
 require_once __DIR__ . '/../../includes/sanciones_reglas.php';
+
+$esStaff = Auth::isStaff();
 
 $pageTitle = 'Sanciones y Descuentos';
 $activeMenu = 'sanciones';
@@ -13,8 +15,12 @@ $db = Database::getConnection();
 $error = '';
 $success = '';
 
-// Marcar sanción como cumplida
+// Marcar sanción como cumplida (solo staff)
 if (isset($_GET['cumplir'])) {
+    if (!$esStaff) {
+        header('Location: index.php');
+        exit;
+    }
     $idSan = (int)$_GET['cumplir'];
     $stmtC = $db->prepare("UPDATE sanciones SET estado = 'CUMPLIDA', fecha_cumplimiento = CURDATE() WHERE id_sancion = :id AND estado = 'ACTIVA'");
     $stmtC->execute([':id' => $idSan]);
@@ -26,8 +32,11 @@ if (isset($_GET['cumplir'])) {
     exit;
 }
 
-// Registrar nueva sanción
+// Registrar nueva sanción (solo staff; todo lo demás es solo lectura propia)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'registrar') {
+    if (!$esStaff) {
+        $error = 'No cuenta con los privilegios suficientes para realizar esta acción.';
+    } else {
     $id_proceso = (int)($_POST['id_proceso'] ?? 0);
     $id_tipo_sancion = (int)($_POST['id_tipo_sancion'] ?? 0);
     $fecha = trim($_POST['fecha'] ?? date('Y-m-d'));
@@ -92,20 +101,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $error = 'Error al registrar sanción: ' . $e->getMessage();
         }
     }
+    }
 }
 
-// Listar sanciones (tabs activas / cumplidas)
+// Listar sanciones (tabs activas / cumplidas; no-staff solo ve las propias)
 $filtroS = ($_GET['f'] ?? 'activas') === 'cumplidas' ? 'cumplidas' : 'activas';
-$stmtSan = $db->prepare("SELECT s.*, ts.nombre AS tipo_sancion, p.nombres, p.apellidos, p.ci, u.usuario AS registrado_por_usuario, m.nombre AS modalidad
+$sqlSan = "SELECT s.*, ts.nombre AS tipo_sancion, p.nombres, p.apellidos, p.ci, u.usuario AS registrado_por_usuario, m.nombre AS modalidad
                          FROM sanciones s
                          INNER JOIN tipos_sancion ts ON s.id_tipo_sancion = ts.id_tipo_sancion
                          INNER JOIN procesos pr ON s.id_proceso = pr.id_proceso
                          LEFT JOIN pasantes p ON pr.id_pasante = p.id_pasante
                          LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
                          LEFT JOIN usuarios u ON s.registrado_por = u.id_usuario
-                         WHERE s.estado = :est
-                         ORDER BY s.fecha DESC, s.id_sancion DESC");
-$stmtSan->execute([':est' => $filtroS === 'cumplidas' ? 'CUMPLIDA' : 'ACTIVA']);
+                         WHERE s.estado = :est ";
+$paramsSan = [':est' => $filtroS === 'cumplidas' ? 'CUMPLIDA' : 'ACTIVA'];
+if (!$esStaff) {
+    $sqlSan .= " AND EXISTS (SELECT 1 FROM pasantes px WHERE px.id_pasante = pr.id_pasante AND px.ci = :ci) ";
+    $paramsSan[':ci'] = trim(Auth::user()['ci'] ?? '');
+}
+$sqlSan .= " ORDER BY s.fecha DESC, s.id_sancion DESC";
+$stmtSan = $db->prepare($sqlSan);
+$stmtSan->execute($paramsSan);
 $sanciones = $stmtSan->fetchAll();
 
 // Procesos en curso para el selector (puros, TD y PG, vinculados o no)
@@ -141,11 +157,14 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <?php endif; ?>
 
         <div style="margin-bottom: 20px;">
+            <?php if ($esStaff): ?>
             <button type="button" class="btn btn-danger" onclick="document.getElementById('modalSancion').style.display='flex'">
                 <i class="fa-solid fa-gavel"></i> Registrar Sanción
             </button>
+            <?php endif; ?>
         </div>
 
+        <?php if ($esStaff): ?>
         <!-- Modal Registrar Sanción -->
         <div id="modalSancion" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); z-index: 1000; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 40px 16px;" onclick="if (event.target === this) this.style.display='none'">
             <div class="card" style="max-width: 560px; width: 100%; margin: 0;">
@@ -215,12 +234,13 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </form>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- Listado Histórico de Sanciones -->
         <div class="card">
             <div class="card-header-flex">
                 <div>
-                    <h3 class="card-title">Registro de Sanciones Aplicadas</h3>
+                    <h3 class="card-title"><?= $esStaff ? 'Registro de Sanciones Aplicadas' : 'Mis Sanciones' ?></h3>
                 </div>
                 <span class="badge badge-danger"><?= count($sanciones) ?> registros</span>
             </div>
@@ -294,9 +314,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         <td>
                                             <?php if ($s['estado'] === 'ACTIVA'): ?>
                                                 <span class="badge badge-danger">ACTIVA</span><br>
+                                                <?php if ($esStaff): ?>
                                                 <a href="index.php?cumplir=<?= $s['id_sancion'] ?>" class="btn btn-outline btn-sm" style="margin-top: 6px;" title="Marcar cumplida" onclick="return confirm('¿Marcar esta sanción como cumplida?');">
                                                     <i class="fa-solid fa-check"></i> Cumplida
                                                 </a>
+                                                <?php endif; ?>
                                             <?php else: ?>
                                                 <span class="badge badge-success">CUMPLIDA</span>
                                                 <?php if (!empty($s['fecha_cumplimiento'])): ?>
