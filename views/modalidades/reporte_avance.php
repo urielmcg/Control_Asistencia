@@ -25,6 +25,48 @@ if ($id_pasante > 0) {
 $sql .= " ORDER BY v.porcentaje_completado DESC";
 $reportes = $db->query($sql)->fetchAll();
 
+// Split hour tracks: pure interns vs Trabajo Dirigido
+$gruposHoras = ['Pasantes' => [], 'Trabajo Dirigido' => []];
+foreach ($reportes as $rep) {
+    if (($rep['modalidad'] ?? '') === 'Trabajo Dirigido') {
+        $gruposHoras['Trabajo Dirigido'][] = $rep;
+    } else {
+        $gruposHoras['Pasantes'][] = $rep;
+    }
+}
+
+// Proyecto de Grado: presence in days (Mon-Sat), no hour goal
+$pgSql = "SELECT pr.id_proceso, p.id_pasante, p.nombres, p.apellidos, p.ci, pr.fecha_inicio, pr.fecha_fin,
+                 COUNT(DISTINCT CASE WHEN DAYOFWEEK(a.fecha) <> 1 AND a.hora_entrada IS NOT NULL THEN a.fecha END) AS dias_asistidos,
+                 ROUND(COALESCE(SUM(CASE WHEN a.hora_entrada IS NOT NULL AND a.hora_salida IS NOT NULL THEN TIME_TO_SEC(TIMEDIFF(a.hora_salida, a.hora_entrada)) / 3600.0 ELSE 0 END), 0), 2) AS horas_reg
+          FROM procesos pr
+          INNER JOIN pasantes p ON pr.id_pasante = p.id_pasante
+          INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+          LEFT JOIN asistencias a ON a.id_proceso = pr.id_proceso
+          WHERE pr.estado = 'EN_CURSO' AND m.nombre = 'Proyecto de Grado'";
+$pgParams = [];
+if ($id_pasante > 0) {
+    $pgSql .= " AND p.id_pasante = " . $id_pasante;
+}
+$pgSql .= " GROUP BY pr.id_proceso ORDER BY p.apellidos";
+$stmtPg = $db->prepare($pgSql);
+$stmtPg->execute($pgParams);
+$pgRows = [];
+foreach ($stmtPg->fetchAll() as $g) {
+    $metaMeses = 6;
+    if (!empty($g['fecha_inicio']) && !empty($g['fecha_fin'])) {
+        $dd1 = new DateTime($g['fecha_inicio']);
+        $dd2 = new DateTime($g['fecha_fin']);
+        if ($dd2 > $dd1) {
+            $ddiff = $dd1->diff($dd2);
+            $metaMeses = max(1, $ddiff->y * 12 + $ddiff->m);
+        }
+    }
+    $g['meta_dias'] = $metaMeses * 26;
+    $g['faltan'] = max(0, $g['meta_dias'] - (int)$g['dias_asistidos']);
+    $pgRows[] = $g;
+}
+
 $listaPasantes = $db->query("SELECT id_pasante, nombres, apellidos, ci FROM pasantes ORDER BY apellidos ASC")->fetchAll();
 
 require_once __DIR__ . '/../../includes/header.php';
@@ -67,7 +109,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </form>
         </div>
 
-        <?php foreach ($reportes as $rep): ?>
+        <?php foreach ($gruposHoras as $tituloGrupo => $grupo): ?>
+            <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--primary-blue); margin: 8px 0 16px 0;"><?= htmlspecialchars($tituloGrupo) ?></h3>
+        <?php foreach ($grupo as $rep): ?>
             <?php 
                 $porc = (float)$rep['porcentaje_completado'];
                 $cumplido = $porc >= 100;
@@ -129,6 +173,45 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <?php endif; ?>
             </div>
         <?php endforeach; ?>
+        <?php endforeach; ?>
+
+        <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--primary-blue); margin: 8px 0 16px 0;">Proyecto de Grado — presencia por días</h3>
+        <div class="card" style="margin-bottom: 24px;">
+            <div class="table-responsive">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>CI</th>
+                            <th>Días asistidos</th>
+                            <th>Meta (días)</th>
+                            <th>Faltan</th>
+                            <th>Horas registradas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($pgRows)): ?>
+                            <tr>
+                                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                                    Sin procesos de Proyecto de Grado en curso.
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($pgRows as $g): ?>
+                                <tr>
+                                    <td><strong><?= htmlspecialchars($g['nombres'] . ' ' . $g['apellidos']) ?></strong></td>
+                                    <td><?= htmlspecialchars($g['ci']) ?></td>
+                                    <td><?= (int)$g['dias_asistidos'] ?></td>
+                                    <td><?= $g['meta_dias'] ?></td>
+                                    <td><strong style="color: #b91c1c;"><?= $g['faltan'] ?> días</strong></td>
+                                    <td><?= htmlspecialchars($g['horas_reg']) ?> hrs</td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
         <!-- Versión tabular solo para impresión/PDF (invisible en pantalla) -->
         <div class="print-report">
@@ -149,7 +232,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($reportes as $rep): ?>
+                    <?php foreach ($gruposHoras as $tituloGrupo => $grupo): ?>
+                        <tr>
+                            <td colspan="6" style="background: #e2e8f0; font-weight: 800;"><?= htmlspecialchars($tituloGrupo) ?></td>
+                        </tr>
+                        <?php foreach ($grupo as $rep): ?>
                         <tr>
                             <td>
                                 <strong><?= htmlspecialchars($rep['nombres'] . ' ' . $rep['apellidos']) ?></strong><br>
@@ -163,6 +250,33 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <td><?= $rep['horas_acumuladas'] ?> hrs</td>
                             <td><?= $rep['horas_faltantes'] ?> hrs</td>
                             <td><?= $rep['porcentaje_completado'] ?>%</td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top: 14px;">Proyecto de Grado — presencia por días</h3>
+            <table class="print-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>CI</th>
+                        <th>Días asistidos</th>
+                        <th>Meta (días)</th>
+                        <th>Faltan</th>
+                        <th>Horas registradas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($pgRows as $g): ?>
+                        <tr>
+                            <td><strong><?= htmlspecialchars($g['nombres'] . ' ' . $g['apellidos']) ?></strong></td>
+                            <td><?= htmlspecialchars($g['ci']) ?></td>
+                            <td><?= (int)$g['dias_asistidos'] ?></td>
+                            <td><?= $g['meta_dias'] ?></td>
+                            <td><?= $g['faltan'] ?> días</td>
+                            <td><?= htmlspecialchars($g['horas_reg']) ?> hrs</td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
