@@ -95,25 +95,25 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;">
-                    <div style="background: #f8fafc; border-top: 3px solid var(--primary-blue); border-radius: 0 0 8px 8px; padding: 12px 14px;">
-                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.6px; white-space: nowrap;">MODALIDAD</div>
-                        <div style="font-size: 1.05rem; font-weight: 800; color: #1e293b; margin-top: 4px;"><?= htmlspecialchars($rep['modalidad']) ?></div>
+                <div class="form-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+                    <div style="background: #f8fafc; padding: 12px; border-radius: 8px;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Modalidad</span>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #1e293b;"><?= htmlspecialchars($rep['modalidad']) ?></div>
                     </div>
 
-                    <div style="background: #f8fafc; border-top: 3px solid #64748b; border-radius: 0 0 8px 8px; padding: 12px 14px;">
-                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.6px; white-space: nowrap;">HORAS REQUERIDAS</div>
-                        <div style="font-size: 1.05rem; font-weight: 800; color: #1e293b; margin-top: 4px;"><?= $rep['horas_requeridas'] ?> <small style="font-size: 0.8rem; font-weight: 600;">hrs</small></div>
+                    <div style="background: #f8fafc; padding: 12px; border-radius: 8px;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Horas Requeridas</span>
+                        <div style="font-size: 0.95rem; font-weight: 700; color: #1e293b;"><?= $rep['horas_requeridas'] ?> hrs</div>
                     </div>
 
-                    <div style="background: #f0fdf4; border-top: 3px solid #16a34a; border-radius: 0 0 8px 8px; padding: 12px 14px;">
-                        <div style="font-size: 0.7rem; color: #15803d; font-weight: 700; letter-spacing: 0.6px; white-space: nowrap;">HORAS ACUMULADAS</div>
-                        <div style="font-size: 1.25rem; font-weight: 800; color: #166534; margin-top: 4px;"><?= $rep['horas_acumuladas'] ?> <small style="font-size: 0.8rem; font-weight: 600;">hrs</small></div>
+                    <div style="background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #bbf7d0;">
+                        <span style="font-size: 0.75rem; color: #15803d; font-weight: 700; text-transform: uppercase;">Horas Acumuladas</span>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: #166534;"><?= $rep['horas_acumuladas'] ?> hrs</div>
                     </div>
 
-                    <div style="background: #fef2f2; border-top: 3px solid #dc2626; border-radius: 0 0 8px 8px; padding: 12px 14px;">
-                        <div style="font-size: 0.7rem; color: #b91c1c; font-weight: 700; letter-spacing: 0.6px; white-space: nowrap;">HORAS FALTANTES</div>
-                        <div style="font-size: 1.25rem; font-weight: 800; color: #dc2626; margin-top: 4px;"><?= $rep['horas_faltantes'] ?> <small style="font-size: 0.8rem; font-weight: 600;">hrs</small></div>
+                    <div style="background: #fef2f2; padding: 12px; border-radius: 8px; border: 1px solid #fecaca;">
+                        <span style="font-size: 0.75rem; color: #b91c1c; font-weight: 700; text-transform: uppercase;">Horas Faltantes</span>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: #dc2626;"><?= $rep['horas_faltantes'] ?> hrs</div>
                     </div>
                 </div>
 
