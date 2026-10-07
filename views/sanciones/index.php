@@ -13,6 +13,19 @@ $db = Database::getConnection();
 $error = '';
 $success = '';
 
+// Marcar sanción como cumplida
+if (isset($_GET['cumplir'])) {
+    $idSan = (int)$_GET['cumplir'];
+    $stmtC = $db->prepare("UPDATE sanciones SET estado = 'CUMPLIDA', fecha_cumplimiento = CURDATE() WHERE id_sancion = :id AND estado = 'ACTIVA'");
+    $stmtC->execute([':id' => $idSan]);
+    if ($stmtC->rowCount() > 0) {
+        Auth::logAudit('SANCION_CUMPLIDA', 'sanciones', $idSan, 'Sanción marcada como cumplida');
+        $_SESSION['flash_success'] = 'Sanción marcada como cumplida.';
+    }
+    header('Location: index.php');
+    exit;
+}
+
 // Registrar nueva sanción
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'registrar') {
     $id_proceso = (int)($_POST['id_proceso'] ?? 0);
@@ -81,15 +94,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Listar sanciones
-$sanciones = $db->query("SELECT s.*, ts.nombre AS tipo_sancion, p.nombres, p.apellidos, p.ci, u.usuario AS registrado_por_usuario, m.nombre AS modalidad
+// Listar sanciones (tabs activas / cumplidas)
+$filtroS = ($_GET['f'] ?? 'activas') === 'cumplidas' ? 'cumplidas' : 'activas';
+$stmtSan = $db->prepare("SELECT s.*, ts.nombre AS tipo_sancion, p.nombres, p.apellidos, p.ci, u.usuario AS registrado_por_usuario, m.nombre AS modalidad
                          FROM sanciones s
                          INNER JOIN tipos_sancion ts ON s.id_tipo_sancion = ts.id_tipo_sancion
                          INNER JOIN procesos pr ON s.id_proceso = pr.id_proceso
                          LEFT JOIN pasantes p ON pr.id_pasante = p.id_pasante
                          LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
                          LEFT JOIN usuarios u ON s.registrado_por = u.id_usuario
-                         ORDER BY s.fecha DESC, s.id_sancion DESC")->fetchAll();
+                         WHERE s.estado = :est
+                         ORDER BY s.fecha DESC, s.id_sancion DESC");
+$stmtSan->execute([':est' => $filtroS === 'cumplidas' ? 'CUMPLIDA' : 'ACTIVA']);
+$sanciones = $stmtSan->fetchAll();
 
 // Procesos en curso para el selector (puros, TD y PG, vinculados o no)
 $procesos = $db->query("SELECT pr.id_proceso, pr.horas_requeridas, p.nombres, p.apellidos, p.ci, COALESCE(m.nombre, 'Pasantía') AS modalidad
@@ -194,6 +211,15 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <span class="badge badge-danger"><?= count($sanciones) ?> registros</span>
                 </div>
 
+                <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                    <a href="index.php?f=activas" class="btn btn-sm <?= $filtroS === 'activas' ? 'btn-primary' : 'btn-outline' ?>">
+                        Activas
+                    </a>
+                    <a href="index.php?f=cumplidas" class="btn btn-sm <?= $filtroS === 'cumplidas' ? 'btn-primary' : 'btn-outline' ?>">
+                        Cumplidas
+                    </a>
+                </div>
+
                 <div class="table-responsive">
                     <table class="table-custom">
                         <thead>
@@ -204,6 +230,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <th>Motivo</th>
                                 <th>Descuento</th>
                                 <th>Supervisor</th>
+                                <th>Estado</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -249,6 +276,19 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                         </td>
                                         <td>
                                             <span class="badge badge-secondary"><?= htmlspecialchars($s['registrado_por_usuario'] ?? 'Sistema') ?></span>
+                                        </td>
+                                        <td>
+                                            <?php if ($s['estado'] === 'ACTIVA'): ?>
+                                                <span class="badge badge-danger">ACTIVA</span><br>
+                                                <a href="index.php?cumplir=<?= $s['id_sancion'] ?>" class="btn btn-outline btn-sm" style="margin-top: 6px;" title="Marcar cumplida" onclick="return confirm('¿Marcar esta sanción como cumplida?');">
+                                                    <i class="fa-solid fa-check"></i> Cumplida
+                                                </a>
+                                            <?php else: ?>
+                                                <span class="badge badge-success">CUMPLIDA</span>
+                                                <?php if (!empty($s['fecha_cumplimiento'])): ?>
+                                                    <br><small style="color: var(--text-muted);"><?= htmlspecialchars(date('d/m/Y', strtotime($s['fecha_cumplimiento']))) ?></small>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

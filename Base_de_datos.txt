@@ -403,6 +403,7 @@ CREATE TABLE sanciones (
     material TEXT NULL,
     sorteo VARCHAR(30) NULL,
     fecha_entrega DATE NULL,
+    fecha_cumplimiento DATE NULL,
 
     estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVA',
 

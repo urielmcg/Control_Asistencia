@@ -259,6 +259,7 @@ CREATE TABLE IF NOT EXISTS sanciones (
     material TEXT NULL,
     sorteo VARCHAR(30) NULL,
     fecha_entrega DATE NULL,
+    fecha_cumplimiento DATE NULL,
     estado VARCHAR(30) NOT NULL DEFAULT 'ACTIVA',
     fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_sanciones_proceso
