@@ -99,10 +99,11 @@ if ($qrProblem === '' && ($_SERVER['REQUEST_METHOD'] === 'POST' || $directMark))
                         $result = 'error';
                         $message = $vEntrada['error'];
                     } else {
+                        $horaEntrada = $vEntrada['hora_entrada'];
                         $stmtIns = $db->prepare("INSERT INTO asistencias (id_proceso, id_qr, fecha, hora_entrada, estado, observacion)
                                                  VALUES (:proc, :qr, :fecha, :hora, 'PRESENTE', 'Auto-marcado móvil ENTRADA')");
-                        $stmtIns->execute([':proc' => $proceso['id_proceso'], ':qr' => $qrRow['id_qr'], ':fecha' => $hoy, ':hora' => $ahora]);
-                        registrarSancionAtrasoAuto($db, $proceso['id_proceso'], $ahora, $hoy);
+                        $stmtIns->execute([':proc' => $proceso['id_proceso'], ':qr' => $qrRow['id_qr'], ':fecha' => $hoy, ':hora' => $horaEntrada]);
+                        registrarSancionAtrasoAuto($db, $proceso['id_proceso'], $horaEntrada, $hoy);
                         header('Location: marcar.php?qr=' . urlencode($qrToken) . '&marcado=entrada');
                         exit;
                     }

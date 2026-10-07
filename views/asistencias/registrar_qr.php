@@ -183,30 +183,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $asistenciaHoy = $stmtAsis->fetch();
 
                     if (!$asistenciaHoy) {
-                        // REGISTRAR ENTRADA (solo dentro de la ventana 09:00-12:00, lun-sáb)
+                        // REGISTRAR ENTRADA (lun-sáb; anticipada se registra a las 09:00)
                         $vEntrada = ventanaEntrada(new DateTime());
                         if (!$vEntrada['ok']) {
                             $mensaje = $vEntrada['error'];
                             $tipoMensaje = 'danger';
                         } else {
+                            $horaEntrada = $vEntrada['hora_entrada'];
                             $stmtIns = $db->prepare("INSERT INTO asistencias (id_proceso, id_qr, fecha, hora_entrada, estado, observacion)
                                                      VALUES (:id_proceso, :id_qr, :fecha, :hora_entrada, 'PRESENTE', 'Marcado biométrico/QR Entrada')");
                             $stmtIns->execute([
                                 ':id_proceso'     => $proceso['id_proceso'],
                                 ':id_qr'          => $idQrActual,
                                 ':fecha'          => $hoy,
-                                ':hora_entrada'   => $ahora
+                                ':hora_entrada'   => $horaEntrada
                             ]);
 
-                            $mensaje = "¡ENTRADA REGISTRADA! " . $pasante['nombres'] . " " . $pasante['apellidos'] . " a las $ahora.";
-                            $sancAuto = registrarSancionAtrasoAuto($db, $proceso['id_proceso'], $ahora, $hoy);
+                            $mensaje = "¡ENTRADA REGISTRADA! " . $pasante['nombres'] . " " . $pasante['apellidos'] . " a las $horaEntrada."
+                                . ($vEntrada['ajustada'] ? ' (Llegada anticipada registrada a las 09:00.)' : '');
+                            $sancAuto = registrarSancionAtrasoAuto($db, $proceso['id_proceso'], $horaEntrada, $hoy);
                             if ($sancAuto) {
                                 $mensaje .= " Sanción automática: $sancAuto";
                             }
                             $tipoMensaje = 'success';
                             $datosMarcado = [
                                 'tipo' => 'ENTRADA',
-                                'hora' => $ahora,
+                                'hora' => $horaEntrada,
                                 'pasante' => $pasante['nombres'] . ' ' . $pasante['apellidos'],
                                 'ci' => $pasante['ci'],
                                 'modalidad' => $proceso['modalidad']

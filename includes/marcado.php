@@ -30,16 +30,24 @@ function ventanaMarcacion(DateTime $ahora) {
 }
 
 /**
- * Entry is only valid inside the 09:00-12:00 window, Monday to Saturday.
- * @return array{ok: bool, error: string}
+ * Entry is valid Monday to Saturday. Early arrivals (before 09:00) are
+ * accepted but recorded at 09:00:00 with no sanction. After 12:00 entry
+ * is rejected. Returns the time to record.
+ * @return array{ok: bool, hora_entrada: string, ajustada: bool, error: string}
  */
 function ventanaEntrada(DateTime $ahora) {
-    $r = ventanaMarcacion($ahora);
-    if (!$r['ok']) {
-        return ['ok' => false, 'error' => $r['error']];
+    $dow = (int)$ahora->format('N'); // 1 = Monday ... 7 = Sunday
+    if ($dow === 7) {
+        return ['ok' => false, 'hora_entrada' => $ahora->format('H:i:s'), 'ajustada' => false,
+                'error' => 'Hoy domingo no hay jornada. El horario es de lunes a sábado, 09:00 a 12:00.'];
     }
-    if ($r['tope_aplicado']) {
-        return ['ok' => false, 'error' => 'Fuera de horario. La jornada de marcación es de 09:00 a 12:00.'];
+    $hora = $ahora->format('H:i:s');
+    if ($hora < '09:00:00') {
+        return ['ok' => true, 'hora_entrada' => '09:00:00', 'ajustada' => true, 'error' => ''];
     }
-    return ['ok' => true, 'error' => ''];
+    if ($hora > '12:00:00') {
+        return ['ok' => false, 'hora_entrada' => $hora, 'ajustada' => false,
+                'error' => 'Fuera de horario. La jornada de marcación es de 09:00 a 12:00.'];
+    }
+    return ['ok' => true, 'hora_entrada' => $hora, 'ajustada' => false, 'error' => ''];
 }
