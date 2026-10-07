@@ -192,17 +192,30 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                             <span class="badge badge-info"><?= htmlspecialchars($sol['estado']) ?></span>
                                         <?php endif; ?>
                                     </td>
-                                    <td style="white-space: nowrap;">
-                                        <?php if (!empty($sol['id_pasante'])): ?>
-                                            <a href="../pasantes/editar.php?id=<?= $sol['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Editar postulante">
-                                                <i class="fa-solid fa-pen"></i>
-                                            </a>
-                                            <a href="../asistencias/historial.php?id_pasante=<?= $sol['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Ver asistencias">
-                                                <i class="fa-solid fa-eye"></i>
-                                            </a>
-                                        <?php else: ?>
-                                            <span style="color: var(--text-muted); font-size: 0.8rem;">—</span>
-                                        <?php endif; ?>
+                                    <td>
+                                        <div style="display: flex; gap: 6px;">
+                                            <?php if (!empty($sol['id_pasante'])): ?>
+                                                <a href="../pasantes/credencial_qr.php?id=<?= $sol['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Ver Credencial QR" style="color: var(--primary-blue); border-color: var(--primary-blue);">
+                                                    <i class="fa-solid fa-qrcode"></i>
+                                                </a>
+                                                <a href="../pasantes/editar.php?id=<?= $sol['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Editar">
+                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                                </a>
+                                                <a href="../asistencias/historial.php?id_pasante=<?= $sol['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Ver Asistencias">
+                                                    <i class="fa-solid fa-calendar-days"></i>
+                                                </a>
+                                            <?php else: ?>
+                                                <span class="btn btn-outline btn-sm" title="Sin postulante vinculado" style="opacity: 0.4; cursor: not-allowed;">
+                                                    <i class="fa-solid fa-qrcode"></i>
+                                                </span>
+                                                <span class="btn btn-outline btn-sm" title="Sin postulante vinculado" style="opacity: 0.4; cursor: not-allowed;">
+                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                                </span>
+                                                <span class="btn btn-outline btn-sm" title="Sin postulante vinculado" style="opacity: 0.4; cursor: not-allowed;">
+                                                    <i class="fa-solid fa-calendar-days"></i>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
