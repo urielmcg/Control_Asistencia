@@ -4,7 +4,7 @@
  * Vista apta para pantalla e impresión formal.
  */
 require_once __DIR__ . '/../../config/auth.php';
-Auth::requireStaff();
+Auth::requireLogin();
 
 $pageTitle = 'Reporte de Avance y Certificación';
 $activeMenu = 'reportes';
@@ -13,6 +13,15 @@ $db = Database::getConnection();
 // Filtro por pasante específico y por track
 $id_pasante = isset($_GET['id_pasante']) ? (int)$_GET['id_pasante'] : 0;
 $trackFiltro = $_GET['track'] ?? 'todos';
+// Pasantes solo ven su propio reporte, sin importar parámetros URL
+$esPropio = false;
+if (Auth::isPasante()) {
+    $stmtOwn = $db->prepare("SELECT id_pasante FROM pasantes WHERE ci = :ci LIMIT 1");
+    $stmtOwn->execute([':ci' => trim(Auth::user()['ci'] ?? '')]);
+    $own = $stmtOwn->fetch();
+    $id_pasante = $own ? (int)$own['id_pasante'] : -1;
+    $esPropio = true;
+}
 if (!in_array($trackFiltro, ['todos', 'pasantes', 'td', 'pg'], true)) {
     $trackFiltro = 'todos';
 }
@@ -110,6 +119,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </div>
             </div>
 
+            <?php if (!$esPropio): ?>
             <!-- Selector de pasante y track para filtrar reporte -->
             <form method="GET" action="reporte_avance.php" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;" class="no-print">
                 <label style="font-weight: 700; font-size: 0.85rem; color: #475569;">Filtrar por estudiante:</label>
@@ -130,6 +140,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <a href="reporte_avance.php" class="btn btn-outline btn-sm">Ver Todos</a>
                 <?php endif; ?>
             </form>
+            <?php endif; ?>
         </div>
 
         <?php foreach ($gruposHoras as $tituloGrupo => $grupo): ?>

@@ -86,6 +86,12 @@ $isStaff = Auth::isStaff();
                 <span>Mis Sanciones</span>
             </a>
         </li>
+        <li>
+            <a href="<?= APP_ROOT ?>views/modalidades/reporte_avance.php" class="<?= ($activeMenu === 'reportes') ? 'active' : '' ?>">
+                <i class="fa-solid fa-file-contract"></i>
+                <span>Mis Reportes</span>
+            </a>
+        </li>
         <?php endif; ?>
 
         <?php if ($currentUser && $currentUser['rol_name'] === 'ADMINISTRADOR'): ?>
