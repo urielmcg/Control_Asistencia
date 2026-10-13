@@ -15,6 +15,18 @@ $fecha_desde = trim($_GET['fecha_desde'] ?? '');
 $fecha_hasta = trim($_GET['fecha_hasta'] ?? '');
 // Filtro por proceso (solicitudes sin pasante vinculado): solo staff
 $id_proceso_f = (!Auth::isPasante()) ? (int)($_GET['id_proceso'] ?? 0) : 0;
+// Sujeto único del filtro (p:id pasante | r:id proceso), compatible con params legacy
+$sujeto = trim($_GET['sujeto'] ?? '');
+if ($sujeto !== '' && preg_match('/^([pr]):(\d+)$/', $sujeto, $mm)) {
+    if ($mm[1] === 'p') {
+        $id_pasante = (int)$mm[2];
+        $id_proceso_f = 0;
+    } else {
+        $id_proceso_f = (int)$mm[2];
+        $id_pasante = 0;
+    }
+}
+$selSujeto = $id_pasante > 0 ? 'p:' . $id_pasante : ($id_proceso_f > 0 ? 'r:' . $id_proceso_f : '');
 
 // Staff ve todo; el resto solo ve sus procesos (pasante o modalidad sin pasante)
 $esPropio = false;
@@ -103,8 +115,13 @@ if ($id_proceso_f > 0) {
     $procesoCtx = $stmtCtx->fetch();
 }
 
-// Lista de pasantes para el selector de filtro
+// Lista de pasantes y de solicitudes sin pasante para el selector de filtro
 $listaPasantes = $db->query("SELECT id_pasante, nombres, apellidos, ci FROM pasantes ORDER BY apellidos ASC")->fetchAll();
+$listaSol = $db->query("SELECT pr.id_proceso, s.postulante, s.ci, COALESCE(m.nombre, 'Modalidad') AS modalidad
+                        FROM procesos pr
+                        INNER JOIN solicitudes_modalidad s ON s.id_proceso = pr.id_proceso
+                        LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                        WHERE pr.id_pasante IS NULL ORDER BY s.postulante ASC")->fetchAll();
 
 // Resumen del alcance filtrado (un pasante, un proceso o vista propia)
 $resumen = null;
@@ -162,14 +179,25 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <input type="hidden" name="tab" value="<?= htmlspecialchars($tabH) ?>">
                 <?php if (!$esPropio): ?>
                 <div style="flex: 1; min-width: 220px;">
-                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Pasante:</label>
-                    <select name="id_pasante" class="form-control" style="margin-top: 4px;">
-                        <option value="0">-- Todos los Pasantes --</option>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Pasante/Modalidad:</label>
+                    <select name="sujeto" class="form-control" style="margin-top: 4px;">
+                        <option value="">-- Todos --</option>
+                        <optgroup label="Pasantes">
                         <?php foreach ($listaPasantes as $pas): ?>
-                            <option value="<?= $pas['id_pasante'] ?>" <?= ($id_pasante == $pas['id_pasante']) ? 'selected' : '' ?>>
+                            <option value="p:<?= $pas['id_pasante'] ?>" <?= ($selSujeto === 'p:' . $pas['id_pasante']) ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($pas['apellidos'] . ' ' . $pas['nombres']) ?> (CI: <?= htmlspecialchars($pas['ci']) ?>)
                             </option>
                         <?php endforeach; ?>
+                        </optgroup>
+                        <?php if (!empty($listaSol)): ?>
+                        <optgroup label="Modalidad sin pasante">
+                        <?php foreach ($listaSol as $sol): ?>
+                            <option value="r:<?= $sol['id_proceso'] ?>" <?= ($selSujeto === 'r:' . $sol['id_proceso']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($sol['postulante']) ?> (CI: <?= htmlspecialchars($sol['ci'] ?? '-') ?>) — <?= htmlspecialchars($sol['modalidad']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                        </optgroup>
+                        <?php endif; ?>
                     </select>
                 </div>
                 <?php endif; ?>
@@ -188,7 +216,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <button type="submit" class="btn btn-primary">
                         <i class="fa-solid fa-filter"></i> Filtrar
                     </button>
-                    <?php if ($id_pasante > 0 || !empty($fecha_desde) || !empty($fecha_hasta)): ?>
+                    <?php if ($id_pasante > 0 || $id_proceso_f > 0 || !empty($fecha_desde) || !empty($fecha_hasta)): ?>
                         <a href="historial.php?tab=<?= htmlspecialchars($tabH) ?>" class="btn btn-outline">Limpiar</a>
                     <?php endif; ?>
                 </div>
