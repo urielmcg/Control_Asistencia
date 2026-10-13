@@ -208,11 +208,14 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                                     <i class="fa-solid fa-calendar-days"></i>
                                                 </a>
                                             <?php else: ?>
-                                                <a href="editar_solicitud.php?id=<?= $sol['id_proceso'] ?>&vincular=1" class="btn btn-outline btn-sm" title="Vincular pasante para habilitar QR e Historial">
-                                                    <i class="fa-solid fa-user-plus"></i>
+                                                <a href="../pasantes/credencial_qr.php?id_proceso=<?= $sol['id_proceso'] ?>" class="btn btn-outline btn-sm" title="Ver Credencial QR" style="color: var(--primary-blue); border-color: var(--primary-blue);">
+                                                    <i class="fa-solid fa-qrcode"></i>
                                                 </a>
                                                 <a href="editar_solicitud.php?id=<?= $sol['id_proceso'] ?>" class="btn btn-outline btn-sm" title="Editar">
                                                     <i class="fa-solid fa-pen-to-square"></i>
+                                                </a>
+                                                <a href="../asistencias/historial.php?id_proceso=<?= $sol['id_proceso'] ?>" class="btn btn-outline btn-sm" title="Ver Asistencias">
+                                                    <i class="fa-solid fa-calendar-days"></i>
                                                 </a>
                                             <?php endif; ?>
                                         </div>

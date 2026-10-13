@@ -13,6 +13,8 @@ $db = Database::getConnection();
 $id_pasante = isset($_GET['id_pasante']) ? (int)$_GET['id_pasante'] : 0;
 $fecha_desde = trim($_GET['fecha_desde'] ?? '');
 $fecha_hasta = trim($_GET['fecha_hasta'] ?? '');
+// Filtro por proceso (solicitudes sin pasante vinculado): solo staff
+$id_proceso_f = (!Auth::isPasante()) ? (int)($_GET['id_proceso'] ?? 0) : 0;
 
 // Interns only ever see their own records, regardless of URL parameters
 $esPropio = false;
@@ -24,11 +26,12 @@ if (Auth::isPasante()) {
     $esPropio = true;
 }
 
-$sql = "SELECT a.*, p.nombres, p.apellidos, p.ci, inst.nombre AS institucion, m.nombre AS modalidad,
+$sql = "SELECT a.*, p.nombres, p.apellidos, p.ci, s.postulante AS sol_postulante, s.ci AS sol_ci, inst.nombre AS institucion, m.nombre AS modalidad,
                ROUND(TIME_TO_SEC(TIMEDIFF(a.hora_salida, a.hora_entrada)) / 3600.0, 2) AS horas_calculadas
         FROM asistencias a
         INNER JOIN procesos pr ON a.id_proceso = pr.id_proceso
-        INNER JOIN pasantes p ON pr.id_pasante = p.id_pasante
+        LEFT JOIN pasantes p ON pr.id_pasante = p.id_pasante
+        LEFT JOIN solicitudes_modalidad s ON s.id_proceso = pr.id_proceso
         INNER JOIN instituciones inst ON pr.id_institucion = inst.id_institucion
         LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
         WHERE 1=1 ";
@@ -40,6 +43,7 @@ $tabH = $_GET['tab'] ?? 'pasantes';
 if (!in_array($tabH, ['pasantes', 'td', 'pg'], true)) {
     $tabH = 'pasantes';
 }
+if ($id_proceso_f <= 0) {
 if ($tabH === 'td') {
     $sql .= " AND m.nombre = 'Trabajo Dirigido' ";
 } elseif ($tabH === 'pg') {
@@ -47,8 +51,12 @@ if ($tabH === 'td') {
 } else {
     $sql .= " AND m.nombre IS NULL ";
 }
+}
 
-if ($id_pasante > 0) {
+if ($id_proceso_f > 0) {
+    $sql .= " AND a.id_proceso = :id_proceso ";
+    $params[':id_proceso'] = $id_proceso_f;
+} elseif ($id_pasante > 0) {
     $sql .= " AND p.id_pasante = :id_pasante ";
     $params[':id_pasante'] = $id_pasante;
 }
@@ -67,6 +75,20 @@ $sql .= " ORDER BY a.fecha DESC, a.hora_entrada DESC";
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $asistencias = $stmt->fetchAll();
+
+// Contexto del proceso filtrado (para el banner)
+$procesoCtx = null;
+if ($id_proceso_f > 0) {
+    $stmtCtx = $db->prepare("SELECT pr.id_proceso, pr.estado, COALESCE(m.nombre, 'Pasantía') AS modalidad,
+                                    COALESCE(s.postulante, TRIM(CONCAT(COALESCE(p.nombres, ''), ' ', COALESCE(p.apellidos, '')))) AS quien
+                             FROM procesos pr
+                             LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                             LEFT JOIN solicitudes_modalidad s ON s.id_proceso = pr.id_proceso
+                             LEFT JOIN pasantes p ON pr.id_pasante = p.id_pasante
+                             WHERE pr.id_proceso = :id LIMIT 1");
+    $stmtCtx->execute([':id' => $id_proceso_f]);
+    $procesoCtx = $stmtCtx->fetch();
+}
 
 // Lista de pasantes para el selector de filtro
 $listaPasantes = $db->query("SELECT id_pasante, nombres, apellidos, ci FROM pasantes ORDER BY apellidos ASC")->fetchAll();
@@ -140,6 +162,13 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </form>
 
             <div class="table-responsive">
+                <?php if ($procesoCtx): ?>
+                    <div class="alert alert-info" style="margin-bottom: 12px;">
+                        Historial del proceso #<?= $procesoCtx['id_proceso'] ?> — <strong><?= htmlspecialchars($procesoCtx['quien'] ?: 'Sin nombre') ?></strong>
+                        (<?= htmlspecialchars($procesoCtx['modalidad']) ?>) ·
+                        <a href="historial.php?tab=<?= htmlspecialchars($tabH) ?>">Ver todos</a>
+                    </div>
+                <?php endif; ?>
                 <table class="table-custom">
                     <thead>
                         <tr>
@@ -165,8 +194,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             <?php foreach ($asistencias as $as): ?>
                                 <tr>
                                     <td><strong><?= htmlspecialchars(date('d/m/Y', strtotime($as['fecha']))) ?></strong></td>
-                                    <td><?= htmlspecialchars($as['ci']) ?></td>
-                                    <td><strong><?= htmlspecialchars($as['nombres'] . ' ' . $as['apellidos']) ?></strong></td>
+                                    <td><?= htmlspecialchars($as['ci'] ?? $as['sol_ci'] ?? '-') ?></td>
+                                    <?php $nomH = trim(($as['nombres'] ?? '') . ' ' . ($as['apellidos'] ?? '')); if ($nomH === '') { $nomH = $as['sol_postulante'] ?? '-'; } ?>
+                                    <td><strong><?= htmlspecialchars($nomH) ?></strong></td>
                                     <td><?= htmlspecialchars($as['modalidad'] ?? 'Pasantía') ?></td>
                                     <td><span class="badge badge-success"><?= htmlspecialchars($as['hora_entrada'] ?? '-') ?></span></td>
                                     <td>

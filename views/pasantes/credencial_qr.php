@@ -48,6 +48,40 @@ if ($id_pasante > 0) {
 }
 
 // Lista de pasantes para selector alternativo si no se encontró o no se pasó id
+// Modo proceso: credencial para solicitudes de modalidad sin pasante vinculado.
+// El QR codifica el CI del postulante, igual que en pasantes.
+$id_proceso_qr = (int)($_GET['id_proceso'] ?? 0);
+$esProceso = false;
+$procesoSinCI = false;
+if (!$pasante && $id_proceso_qr > 0) {
+    $stmtP = $db->prepare("SELECT pr.*, COALESCE(m.nombre, 'Pasantía') AS modalidad, m.descripcion AS modalidad_desc,
+                                  s.postulante, s.ci AS sol_ci, s.universidad, s.carrera
+                           FROM procesos pr
+                           LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                           LEFT JOIN solicitudes_modalidad s ON s.id_proceso = pr.id_proceso
+                           WHERE pr.id_proceso = :id LIMIT 1");
+    $stmtP->execute([':id' => $id_proceso_qr]);
+    if ($proc = $stmtP->fetch()) {
+        $nombrePost = trim($proc['postulante'] ?? '');
+        $ciPost = trim($proc['sol_ci'] ?? '');
+        if ($nombrePost !== '' && $ciPost !== '') {
+            $partes = preg_split('/\s+/', $nombrePost, 2);
+            $pasante = [
+                'id_pasante' => 0,
+                'nombres' => $partes[0],
+                'apellidos' => $partes[1] ?? '',
+                'ci' => $ciPost,
+                'carrera' => $proc['carrera'] ?? null,
+                'institucion' => $proc['universidad'] ?? null,
+                'correo' => null, 'telefono' => null, 'semestre' => null, 'foto' => null,
+            ];
+            $procesoActivo = $proc;
+            $esProceso = true;
+        } elseif ($nombrePost !== '') {
+            $procesoSinCI = true;
+        }
+    }
+}
 $pasantesList = $db->query("SELECT id_pasante, ci, nombres, apellidos, estado FROM pasantes ORDER BY apellidos ASC, nombres ASC")->fetchAll();
 
 require_once __DIR__ . '/../../includes/header.php';
@@ -59,6 +93,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
     <main class="content-body">
         <?php if (!$pasante): ?>
+            <?php if ($procesoSinCI): ?>
+                <div class="alert alert-danger" style="max-width: 650px; margin: 40px auto 0;">
+                    <span>Ese proceso no tiene CI registrado: <a href="../modalidades/editar_solicitud.php?id=<?= $id_proceso_qr ?>">completalo en Editar Solicitud</a> para generar un código válido.</span>
+                </div>
+            <?php endif; ?>
             <!-- Alerta Amigable y Selección de Pasante -->
             <div class="card" style="max-width: 650px; margin: 40px auto; text-align: center; padding: 35px 25px;">
                 <div style="width: 70px; height: 70px; margin: 0 auto 18px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary-red); font-size: 2rem;">
@@ -94,12 +133,12 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             <!-- Barra de Acciones Superior (No imprimible) -->
             <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 15px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
-                    <a href="index.php" class="btn btn-outline">
+                    <a href="<?= $esProceso ? '../modalidades/index.php' : 'index.php' ?>" class="btn btn-outline">
                         <i class="fa-solid fa-arrow-left"></i> Volver a la Lista
                     </a>
                     <div>
                         <h2 style="font-size: 1.35rem; font-weight: 800; color: var(--primary-blue); margin: 0;">
-                            Credencial Oficial del Pasante
+                            <?= $esProceso ? 'Credencial Oficial de Modalidad' : 'Credencial Oficial del Pasante' ?>
                         </h2>
                         <span style="font-size: 0.85rem; color: var(--text-muted);">
                             <?= htmlspecialchars($nombreCompleto) ?> &bull; CI: <?= htmlspecialchars($pasante['ci']) ?>
@@ -179,7 +218,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 </div>
                                 <div class="academic-row">
                                     <span class="label"><i class="fa-solid fa-business-time"></i> Horas Requeridas:</span>
-                                    <span class="val"><?= htmlspecialchars($procesoActivo['horas_requeridas']) ?> horas</span>
+                                    <span class="val"><?= htmlspecialchars($procesoActivo['horas_requeridas'] ?? 'No aplican') ?> <?= isset($procesoActivo['horas_requeridas']) && $procesoActivo['horas_requeridas'] !== null ? 'horas' : '' ?></span>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -187,7 +226,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
                     <!-- Pie de la Credencial -->
                     <div class="carnet-footer">
-                        <p>Credencial de identificación del pasante</p>
+                        <p><?= $esProceso ? 'Credencial de identificación de modalidad' : 'Credencial de identificación del pasante' ?></p>
                         <small>CCDB &bull; Sistema Integrado de Gestión</small>
                     </div>
                 </div>
@@ -232,12 +271,21 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </div>
 
                     <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <?php if ($esProceso): ?>
+                        <a href="../modalidades/editar_solicitud.php?id=<?= $id_proceso_qr ?>" class="btn btn-outline" style="justify-content: center;">
+                            <i class="fa-solid fa-user-pen"></i> Editar Solicitud
+                        </a>
+                        <a href="../asistencias/historial.php?id_proceso=<?= $id_proceso_qr ?>" class="btn btn-outline" style="justify-content: center;">
+                            <i class="fa-solid fa-clock-rotate-left"></i> Ver Historial de Asistencias
+                        </a>
+                        <?php else: ?>
                         <a href="editar.php?id=<?= $pasante['id_pasante'] ?>" class="btn btn-outline" style="justify-content: center;">
                             <i class="fa-solid fa-user-pen"></i> Editar Información del Pasante
                         </a>
                         <a href="../asistencias/historial.php?id_pasante=<?= $pasante['id_pasante'] ?>" class="btn btn-outline" style="justify-content: center;">
                             <i class="fa-solid fa-clock-rotate-left"></i> Ver Historial de Asistencias
                         </a>
+                        <?php endif; ?>
                     </div>
                 </div>
 
