@@ -69,23 +69,34 @@ if ($qrProblem === '' && ($_SERVER['REQUEST_METHOD'] === 'POST' || $directMark))
         $stmtP->execute([':ci' => $ci, ':clean1' => $cleanNumeric, ':clean2' => $cleanNumeric]);
         $pasante = $stmtP->fetch();
 
-        if (!$pasante) {
-            $result = 'error';
-            $message = 'Tu usuario no está vinculado a ningún pasante (CI: ' . $ci . '). Pedí en recepción que vinculen tu cuenta.';
-        } elseif ($pasante['estado'] !== 'ACTIVO') {
+        if ($pasante && $pasante['estado'] !== 'ACTIVO') {
             $result = 'error';
             $message = 'Tu registro de pasante no está ACTIVO (estado: ' . $pasante['estado'] . ').';
         } else {
-            $stmtProc = $db->prepare("SELECT pr.*, COALESCE(m.nombre, 'Pasantía') AS modalidad FROM procesos pr
-                                      LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
-                                      WHERE pr.id_pasante = :id AND pr.estado = 'EN_CURSO'
-                                      ORDER BY pr.id_proceso DESC LIMIT 1");
-            $stmtProc->execute([':id' => $pasante['id_pasante']]);
-            $proceso = $stmtProc->fetch();
+            $proceso = null;
+            if ($pasante) {
+                $stmtProc = $db->prepare("SELECT pr.*, COALESCE(m.nombre, 'Pasantía') AS modalidad FROM procesos pr
+                                          LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                                          WHERE pr.id_pasante = :id AND pr.estado = 'EN_CURSO'
+                                          ORDER BY pr.id_proceso DESC LIMIT 1");
+                $stmtProc->execute([':id' => $pasante['id_pasante']]);
+                $proceso = $stmtProc->fetch();
+            } else {
+                // Sin fila de pasante: proceso por solicitud (CI o usuario de la solicitud)
+                $stmtSol = $db->prepare("SELECT pr.*, COALESCE(m.nombre, 'Pasantía') AS modalidad FROM procesos pr
+                                          LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                                          LEFT JOIN solicitudes_modalidad s ON s.id_proceso = pr.id_proceso
+                                          WHERE pr.estado = 'EN_CURSO' AND (s.ci = :ci OR s.id_usuario = :idu)
+                                          ORDER BY pr.id_proceso DESC LIMIT 1");
+                $stmtSol->execute([':ci' => $ci, ':idu' => (int)(Auth::user()['id'] ?? 0)]);
+                $proceso = $stmtSol->fetch() ?: null;
+            }
 
             if (!$proceso) {
                 $result = 'error';
-                $message = 'No tenés un proceso EN_CURSO asignado. Pedí en recepción que te asignen uno en Modalidades.';
+                $message = $pasante
+                    ? 'No tenés un proceso EN_CURSO asignado. Pedí en recepción que te asignen uno en Modalidades.'
+                    : 'Tu usuario no está vinculado a ningún pasante ni a una solicitud (CI: ' . $ci . '). Pedí en recepción que vinculen tu cuenta.';
             } else {
                 $hoy = date('Y-m-d');
                 $ahora = date('H:i:s');
@@ -94,33 +105,35 @@ if ($qrProblem === '' && ($_SERVER['REQUEST_METHOD'] === 'POST' || $directMark))
                 $asis = $stmtA->fetch();
 
                 if (!$asis) {
-                    $vEntrada = ventanaEntrada(new DateTime());
-                    if (!$vEntrada['ok']) {
-                        $result = 'error';
-                        $message = $vEntrada['error'];
-                    } else {
-                        $horaEntrada = $vEntrada['hora_entrada'];
-                        $stmtIns = $db->prepare("INSERT INTO asistencias (id_proceso, id_qr, fecha, hora_entrada, estado, observacion)
-                                                 VALUES (:proc, :qr, :fecha, :hora, 'PRESENTE', 'Auto-marcado móvil ENTRADA')");
-                        $stmtIns->execute([':proc' => $proceso['id_proceso'], ':qr' => $qrRow['id_qr'], ':fecha' => $hoy, ':hora' => $horaEntrada]);
-                        registrarSancionAtrasoAuto($db, $proceso['id_proceso'], $horaEntrada, $hoy);
-                        header('Location: marcar.php?qr=' . urlencode($qrToken) . '&marcado=entrada');
-                        exit;
+                    $vEntrada = ventanaEntrada($db, (int)$proceso['id_proceso'], new DateTime());
+                    $horaEntrada = $vEntrada['hora_entrada'];
+                    $fh = $vEntrada['fuera_horario'] ? 1 : 0;
+                    $stmtIns = $db->prepare("INSERT INTO asistencias (id_proceso, id_qr, fecha, hora_entrada, fuera_horario, estado, observacion)
+                                             VALUES (:proc, :qr, :fecha, :hora, :fh, 'PRESENTE', :obs)");
+                    $stmtIns->execute([
+                        ':proc' => $proceso['id_proceso'], ':qr' => $qrRow['id_qr'], ':fecha' => $hoy,
+                        ':hora' => $horaEntrada, ':fh' => $fh,
+                        ':obs' => 'Auto-marcado móvil ENTRADA' . ($fh ? ' | FUERA DE HORARIO' : ''),
+                    ]);
+                    if (!$fh) {
+                        registrarSancionAtrasoAuto($db, $proceso['id_proceso'], $horaEntrada, $hoy, substr($vEntrada['turno']['hora_inicio'] ?? '09:00:00', 0, 8));
                     }
+                    header('Location: marcar.php?qr=' . urlencode($qrToken) . '&marcado=entrada');
+                    exit;
                 } elseif (empty($asis['hora_salida'])) {
-                    $vSalida = ventanaMarcacion(new DateTime());
-                    if (!$vSalida['ok']) {
-                        $result = 'error';
-                        $message = $vSalida['error'];
-                    } else {
-                        $horaSalida = $vSalida['hora_salida'];
-                        $stmtUpd = $db->prepare("UPDATE asistencias SET hora_salida = :hora,
-                                                 observacion = CONCAT(COALESCE(observacion, ''), ' | Auto-marcado móvil SALIDA')
-                                                 WHERE id_asistencia = :id");
-                        $stmtUpd->execute([':hora' => $horaSalida, ':id' => $asis['id_asistencia']]);
-                        header('Location: marcar.php?qr=' . urlencode($qrToken) . '&marcado=salida');
-                        exit;
-                    }
+                    $vSalida = ventanaMarcacion($db, (int)$proceso['id_proceso'], new DateTime());
+                    $horaSalida = $vSalida['hora_salida'];
+                    $fh = ((int)($asis['fuera_horario'] ?? 0) || $vSalida['fuera_horario']) ? 1 : 0;
+                    $stmtUpd = $db->prepare("UPDATE asistencias SET hora_salida = :hora, fuera_horario = :fh,
+                                             observacion = CONCAT(COALESCE(observacion, ''), :suf)
+                                             WHERE id_asistencia = :id");
+                    $stmtUpd->execute([
+                        ':hora' => $horaSalida, ':fh' => $fh,
+                        ':suf' => ' | Auto-marcado móvil SALIDA' . ($vSalida['fuera_horario'] ? ' | FUERA DE HORARIO' : ''),
+                        ':id' => $asis['id_asistencia'],
+                    ]);
+                    header('Location: marcar.php?qr=' . urlencode($qrToken) . '&marcado=salida');
+                    exit;
                 } else {
                     header('Location: marcar.php?qr=' . urlencode($qrToken) . '&marcado=done');
                     exit;
@@ -145,11 +158,19 @@ if ($qrProblem === '' && $_SERVER['REQUEST_METHOD'] === 'GET' && Auth::check()) 
         $stmtP->execute([':ci' => trim($user['ci'] ?? '')]);
         if ($row = $stmtP->fetch()) {
             $stmtA = $db->prepare("SELECT a.*, m.nombre AS modalidad FROM asistencias a
-                                   INNER JOIN procesos pr ON a.id_proceso = pr.id_proceso
-                                   INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
-                                   WHERE pr.id_pasante = :id AND a.fecha = CURDATE() LIMIT 1");
+                                    INNER JOIN procesos pr ON a.id_proceso = pr.id_proceso
+                                    LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                                    WHERE pr.id_pasante = :id AND a.fecha = CURDATE() LIMIT 1");
             $stmtA->execute([':id' => $row['id_pasante']]);
             $detail = $stmtA->fetch() ?: null;
+        } else {
+            $stmtS = $db->prepare("SELECT a.*, m.nombre AS modalidad FROM asistencias a
+                                    INNER JOIN procesos pr ON a.id_proceso = pr.id_proceso
+                                    LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                                    LEFT JOIN solicitudes_modalidad s ON s.id_proceso = pr.id_proceso
+                                    WHERE (s.ci = :ci OR s.id_usuario = :idu) AND a.fecha = CURDATE() LIMIT 1");
+            $stmtS->execute([':ci' => trim($user['ci'] ?? ''), ':idu' => (int)($user['id'] ?? 0)]);
+            $detail = $stmtS->fetch() ?: null;
         }
     } catch (Exception $e) {
         // Display-only lookup; marking already succeeded
@@ -202,12 +223,14 @@ $qrErrors = [
   <?php elseif ($result === 'entrada'): ?>
     <div class="ok"><h2>¡ENTRADA registrada!</h2>
       <p>Hora: <strong><?= htmlspecialchars($detail['hora_entrada'] ?? date('H:i:s')) ?></strong><br>Modalidad: <strong><?= htmlspecialchars($detail['modalidad'] ?? '') ?></strong></p>
+      <?php if (!empty($detail['fuera_horario'])): ?><p>Fuera de tu horario programado: queda marcado en tu historial.</p><?php endif; ?>
       <p>Volvé a escanear el QR al salir para registrar tu SALIDA.</p></div>
   <?php elseif ($result === 'salida'): ?>
     <div class="ok"><h2>¡SALIDA registrada!</h2>
       <?php $h = (!empty($detail['hora_entrada']) && !empty($detail['hora_salida'])) ? round((strtotime($detail['hora_salida']) - strtotime($detail['hora_entrada'])) / 3600, 2) : null; ?>
       <p>Entrada: <strong><?= htmlspecialchars($detail['hora_entrada'] ?? '') ?></strong> &bull; Salida: <strong><?= htmlspecialchars($detail['hora_salida'] ?? '') ?></strong><br>
-      <?php if ($h !== null): ?>Hoy trabajaste: <strong><?= htmlspecialchars((string)$h) ?> hrs</strong><?php endif; ?></p></div>
+      <?php if ($h !== null): ?>Hoy trabajaste: <strong><?= htmlspecialchars((string)$h) ?> hrs</strong><?php endif; ?></p>
+      <?php if (!empty($detail['fuera_horario'])): ?><p>Fuera de tu horario programado: queda marcado en tu historial.</p><?php endif; ?></div>
   <?php elseif ($result === 'done'): ?>
     <div class="info"><h2 style="color:#1e40af;margin:0 0 6px 0;">Jornada completa</h2>
       <p>Hoy ya registraste entrada (<?= htmlspecialchars($detail['hora_entrada'] ?? '') ?>) y salida (<?= htmlspecialchars($detail['hora_salida'] ?? '') ?>).</p></div>
