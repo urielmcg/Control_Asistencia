@@ -58,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $horas_requeridas = trim($_POST['horas_requeridas'] ?? '');
     $id_turno = (int)($_POST['id_turno'] ?? 0);
     $id_tutor = (int)($_POST['id_tutor'] ?? 0);
+    $id_pasante_vinc = (int)($_POST['id_pasante_vinc'] ?? -1);
     $fecha_inicio = trim($_POST['fecha_inicio'] ?? '');
     $meses = (int)($_POST['meses'] ?? 0);
     $estado = trim($_POST['estado'] ?? 'EN_CURSO');
@@ -86,12 +87,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $db->beginTransaction();
-            $stmtUpd = $db->prepare("UPDATE procesos SET id_modalidad = :mod, id_tutor = :tutor, id_turno = :turno,
+            if ($id_pasante_vinc > 0) {
+                $stmtVinc = $db->prepare("SELECT id_pasante FROM pasantes WHERE id_pasante = :id LIMIT 1");
+                $stmtVinc->execute([':id' => $id_pasante_vinc]);
+                if (!$stmtVinc->fetch()) {
+                    throw new Exception('El pasante a vincular no existe.');
+                }
+            }
+            $stmtUpd = $db->prepare("UPDATE procesos SET id_modalidad = :mod, id_pasante = :pas, id_tutor = :tutor, id_turno = :turno,
                                      fecha_inicio = :ini, fecha_fin = DATE_ADD(:ini2, INTERVAL :meses MONTH),
                                      horas_requeridas = :horas, estado = :estado, observacion = :obs
                                      WHERE id_proceso = :id");
             $stmtUpd->execute([
                 ':mod'    => $id_modalidad,
+                ':pas'    => $id_pasante_vinc >= 0 ? ($id_pasante_vinc > 0 ? $id_pasante_vinc : null) : $sol['id_pasante'],
                 ':tutor'  => $id_tutor > 0 ? $id_tutor : null,
                 ':turno'  => $id_turno > 0 ? $id_turno : null,
                 ':ini'    => $fecha_inicio,
@@ -150,6 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $modalidades = $db->query("SELECT * FROM modalidades WHERE estado = 1 ORDER BY nombre ASC")->fetchAll();
 $turnos = $db->query("SELECT * FROM turnos WHERE estado = 1 ORDER BY hora_inicio ASC")->fetchAll();
 $tutores = $db->query("SELECT id_tutor, nombre FROM tutores WHERE estado = 'ACTIVO' ORDER BY nombre ASC")->fetchAll();
+$listaPasantes = $db->query("SELECT id_pasante, nombres, apellidos, ci FROM pasantes WHERE estado = 'ACTIVO' ORDER BY apellidos ASC")->fetchAll();
 
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
@@ -225,6 +235,18 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_pasante_vinc">Pasante vinculado</label>
+                        <select name="id_pasante_vinc" id="id_pasante_vinc" class="form-control">
+                            <option value="0">-- Sin vincular --</option>
+                            <?php foreach ($listaPasantes as $pas): ?>
+                                <option value="<?= $pas['id_pasante'] ?>" <?= ((int)($sol['id_pasante'] ?? 0) === (int)$pas['id_pasante']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($pas['apellidos'] . ' ' . $pas['nombres']) ?> (CI: <?= htmlspecialchars($pas['ci']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small style="color: var(--text-muted);">Al vincular se habilitan Credencial QR e Historial.</small>
                     </div>
                     <div class="form-group">
                         <label for="fecha_inicio">Fecha de inicio *</label>
