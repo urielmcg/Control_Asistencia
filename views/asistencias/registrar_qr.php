@@ -153,21 +153,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             $pasante = $stmt->fetch();
 
+            $solRow = null;
             if (!$pasante) {
-                $mensaje = "No se encontró ningún pasante con el CI o Código escaneado: '$codigoRaw'.";
+                // Fallback: solicitud de modalidad por CI escaneado (sin pasante vinculado)
+                $stmtSolQr = $db->prepare("SELECT pr.*, COALESCE(m.nombre, 'Pasantía') AS modalidad, s.postulante, s.ci AS sol_ci
+                                           FROM solicitudes_modalidad s
+                                           INNER JOIN procesos pr ON pr.id_proceso = s.id_proceso
+                                           LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                                           WHERE pr.estado = 'EN_CURSO' AND (s.ci = :ci OR s.ci = :ci_cand
+                                              OR (LENGTH(:ci_clean) >= 4 AND REPLACE(REPLACE(s.ci, '-', ''), ' ', '') = :ci_clean2))
+                                           ORDER BY pr.id_proceso DESC LIMIT 1");
+                $stmtSolQr->execute([':ci' => $codigoRaw, ':ci_cand' => $ciCandidato, ':ci_clean' => $cleanNumeric, ':ci_clean2' => $cleanNumeric]);
+                $solRow = $stmtSolQr->fetch() ?: null;
+            }
+
+            if (!$pasante && !$solRow) {
+                $mensaje = "No se encontró ningún pasante ni solicitud con el CI o Código escaneado: '$codigoRaw'.";
                 $tipoMensaje = 'danger';
-            } elseif ($pasante['estado'] !== 'ACTIVO') {
+            } elseif ($pasante && $pasante['estado'] !== 'ACTIVO') {
                 $mensaje = "El pasante " . $pasante['nombres'] . " " . $pasante['apellidos'] . " no se encuentra en estado ACTIVO (Estado actual: " . $pasante['estado'] . ").";
                 $tipoMensaje = 'danger';
             } else {
-                // Buscar proceso activo (puro, TD o PG)
-                $stmtProc = $db->prepare("SELECT pr.*, COALESCE(m.nombre, 'Pasantía') AS modalidad
-                                          FROM procesos pr
-                                          LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
-                                          WHERE pr.id_pasante = :id_pasante AND pr.estado = 'EN_CURSO'
-                                          ORDER BY pr.id_proceso DESC LIMIT 1");
-                $stmtProc->execute([':id_pasante' => $pasante['id_pasante']]);
-                $proceso = $stmtProc->fetch();
+                // Buscar proceso activo (puro, TD o PG; por pasante o por solicitud)
+                if ($pasante) {
+                    $stmtProc = $db->prepare("SELECT pr.*, COALESCE(m.nombre, 'Pasantía') AS modalidad
+                                              FROM procesos pr
+                                              LEFT JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
+                                              WHERE pr.id_pasante = :id_pasante AND pr.estado = 'EN_CURSO'
+                                              ORDER BY pr.id_proceso DESC LIMIT 1");
+                    $stmtProc->execute([':id_pasante' => $pasante['id_pasante']]);
+                    $proceso = $stmtProc->fetch();
+                    $nomMostrar = $pasante['nombres'] . ' ' . $pasante['apellidos'];
+                    $ciMostrar = $pasante['ci'];
+                } else {
+                    $proceso = $solRow;
+                    $nomMostrar = $solRow['postulante'];
+                    $ciMostrar = $solRow['sol_ci'];
+                }
 
                 if (!$proceso) {
                     $mensaje = "El pasante " . $pasante['nombres'] . " " . $pasante['apellidos'] . " no tiene un proceso de pasantía activo (EN_CURSO). Asigne uno primero en 'Modalidades'.";
@@ -183,73 +205,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $asistenciaHoy = $stmtAsis->fetch();
 
                     if (!$asistenciaHoy) {
-                        // REGISTRAR ENTRADA (lun-sáb; anticipada se registra a las 09:00)
-                        $vEntrada = ventanaEntrada(new DateTime());
-                        if (!$vEntrada['ok']) {
-                            $mensaje = $vEntrada['error'];
-                            $tipoMensaje = 'danger';
-                        } else {
-                            $horaEntrada = $vEntrada['hora_entrada'];
-                            $stmtIns = $db->prepare("INSERT INTO asistencias (id_proceso, id_qr, fecha, hora_entrada, estado, observacion)
-                                                     VALUES (:id_proceso, :id_qr, :fecha, :hora_entrada, 'PRESENTE', 'Marcado biométrico/QR Entrada')");
-                            $stmtIns->execute([
-                                ':id_proceso'     => $proceso['id_proceso'],
-                                ':id_qr'          => $idQrActual,
-                                ':fecha'          => $hoy,
-                                ':hora_entrada'   => $horaEntrada
-                            ]);
+                        // REGISTRAR ENTRADA (ventana del día; fuera de horario se permite y se marca)
+                        $vEntrada = ventanaEntrada($db, (int)$proceso['id_proceso'], new DateTime());
+                        $horaEntrada = $vEntrada['hora_entrada'];
+                        $fhE = $vEntrada['fuera_horario'] ? 1 : 0;
+                        $stmtIns = $db->prepare("INSERT INTO asistencias (id_proceso, id_qr, fecha, hora_entrada, fuera_horario, estado, observacion)
+                                                 VALUES (:id_proceso, :id_qr, :fecha, :hora_entrada, :fh, 'PRESENTE', :obs)");
+                        $stmtIns->execute([
+                            ':id_proceso'     => $proceso['id_proceso'],
+                            ':id_qr'          => $idQrActual,
+                            ':fecha'          => $hoy,
+                            ':hora_entrada'   => $horaEntrada,
+                            ':fh'             => $fhE,
+                            ':obs'            => 'Marcado biométrico/QR Entrada' . ($fhE ? ' | FUERA DE HORARIO' : ''),
+                        ]);
 
-                            $mensaje = "¡ENTRADA REGISTRADA! " . $pasante['nombres'] . " " . $pasante['apellidos'] . " a las $horaEntrada."
-                                . ($vEntrada['ajustada'] ? ' (Llegada anticipada registrada a las 09:00.)' : '');
-                            $sancAuto = registrarSancionAtrasoAuto($db, $proceso['id_proceso'], $horaEntrada, $hoy);
+                        $mensaje = "¡ENTRADA REGISTRADA! " . $nomMostrar . " a las $horaEntrada."
+                            . ($vEntrada['ajustada'] ? " (Llegada anticipada registrada a las $horaEntrada.)" : '')
+                            . ($fhE ? ' (Fuera de horario: queda marcado.)' : '');
+                        if (!$fhE) {
+                            $sancAuto = registrarSancionAtrasoAuto($db, $proceso['id_proceso'], $horaEntrada, $hoy, substr($vEntrada['turno']['hora_inicio'] ?? '09:00:00', 0, 8));
                             if ($sancAuto) {
                                 $mensaje .= " Sanción automática: $sancAuto";
                             }
-                            $tipoMensaje = 'success';
-                            $datosMarcado = [
-                                'tipo' => 'ENTRADA',
-                                'hora' => $horaEntrada,
-                                'pasante' => $pasante['nombres'] . ' ' . $pasante['apellidos'],
-                                'ci' => $pasante['ci'],
-                                'modalidad' => $proceso['modalidad']
-                            ];
                         }
+                        $tipoMensaje = 'success';
+                        $datosMarcado = [
+                            'tipo' => 'ENTRADA',
+                            'hora' => $horaEntrada,
+                            'pasante' => $nomMostrar,
+                            'ci' => $ciMostrar,
+                            'modalidad' => $proceso['modalidad']
+                        ];
                     } else if (empty($asistenciaHoy['hora_salida'])) {
-                        // REGISTRAR SALIDA (tope 12:00 si marca después)
-                        $vSalida = ventanaMarcacion(new DateTime());
-                        if (!$vSalida['ok']) {
-                            $mensaje = $vSalida['error'];
-                            $tipoMensaje = 'danger';
-                        } else {
-                            $horaSalida = $vSalida['hora_salida'];
-                            $stmtUpd = $db->prepare("UPDATE asistencias SET hora_salida = :hora_salida, observacion = CONCAT(COALESCE(observacion,''), ' | Marcado QR Salida')
-                                                     WHERE id_asistencia = :id_asistencia");
-                            $stmtUpd->execute([
-                                ':hora_salida'   => $horaSalida,
-                                ':id_asistencia' => $asistenciaHoy['id_asistencia']
-                            ]);
+                        // REGISTRAR SALIDA (tope del turno si marca después)
+                        $vSalida = ventanaMarcacion($db, (int)$proceso['id_proceso'], new DateTime());
+                        $horaSalida = $vSalida['hora_salida'];
+                        $fhS = ((int)($asistenciaHoy['fuera_horario'] ?? 0) || $vSalida['fuera_horario']) ? 1 : 0;
+                        $stmtUpd = $db->prepare("UPDATE asistencias SET hora_salida = :hora_salida, fuera_horario = :fh, observacion = CONCAT(COALESCE(observacion,''), :suf)
+                                                 WHERE id_asistencia = :id_asistencia");
+                        $stmtUpd->execute([
+                            ':hora_salida'   => $horaSalida,
+                            ':fh'            => $fhS,
+                            ':suf'           => ' | Marcado QR Salida' . ($vSalida['fuera_horario'] ? ' | FUERA DE HORARIO' : ''),
+                            ':id_asistencia' => $asistenciaHoy['id_asistencia']
+                        ]);
 
-                            // Calcular horas cumplidas hoy
-                            $diffSegundos = strtotime($horaSalida) - strtotime($asistenciaHoy['hora_entrada']);
-                            $horasHoy = round($diffSegundos / 3600.0, 2);
+                        // Calcular horas cumplidas hoy
+                        $diffSegundos = strtotime($horaSalida) - strtotime($asistenciaHoy['hora_entrada']);
+                        $horasHoy = round($diffSegundos / 3600.0, 2);
 
-                            $mensaje = "¡SALIDA REGISTRADA! " . $pasante['nombres'] . " " . $pasante['apellidos'] . " a las $horaSalida."
-                                . ($vSalida['tope_aplicado'] ? ' (Tope de jornada 12:00 aplicado.)' : '')
-                                . " Total de hoy: $horasHoy hrs.";
-                            $tipoMensaje = 'success';
-                            $datosMarcado = [
-                                'tipo' => 'SALIDA',
-                                'hora' => $horaSalida,
-                                'hora_entrada' => $asistenciaHoy['hora_entrada'],
-                                'horas_trabajadas' => $horasHoy,
-                                'pasante' => $pasante['nombres'] . ' ' . $pasante['apellidos'],
-                                'ci' => $pasante['ci'],
-                                'modalidad' => $proceso['modalidad']
-                            ];
-                        }
+                        $mensaje = "¡SALIDA REGISTRADA! " . $nomMostrar . " a las $horaSalida."
+                            . ($vSalida['tope_aplicado'] ? " (Tope de jornada $horaSalida aplicado.)" : '')
+                            . ($vSalida['fuera_horario'] ? ' (Fuera de horario: queda marcado.)' : '')
+                            . " Total de hoy: $horasHoy hrs.";
+                        $tipoMensaje = 'success';
+                        $datosMarcado = [
+                            'tipo' => 'SALIDA',
+                            'hora' => $horaSalida,
+                            'hora_entrada' => $asistenciaHoy['hora_entrada'],
+                            'horas_trabajadas' => $horasHoy,
+                            'pasante' => $nomMostrar,
+                            'ci' => $ciMostrar,
+                            'modalidad' => $proceso['modalidad']
+                        ];
                     } else {
                         // Ya completó ambas marcaciones
-                        $mensaje = "El pasante " . $pasante['nombres'] . " ya completó su Entrada (" . $asistenciaHoy['hora_entrada'] . ") y Salida (" . $asistenciaHoy['hora_salida'] . ") de hoy.";
+                        $mensaje = $nomMostrar . " ya completó su Entrada (" . $asistenciaHoy['hora_entrada'] . ") y Salida (" . $asistenciaHoy['hora_salida'] . ") de hoy.";
                         $tipoMensaje = 'info';
                     }
                 }
@@ -262,11 +284,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Obtener asistencias registradas el día de hoy
-$asistenciasHoyLista = $db->query("SELECT a.*, p.id_pasante, p.nombres, p.apellidos, p.ci, m.nombre AS modalidad,
+$asistenciasHoyLista = $db->query("SELECT a.*, p.id_pasante, p.nombres, p.apellidos, p.ci, s.postulante AS sol_postulante, s.ci AS sol_ci, m.nombre AS modalidad,
                                           ROUND(TIME_TO_SEC(TIMEDIFF(a.hora_salida, a.hora_entrada)) / 3600.0, 2) AS horas_calculadas
                                    FROM asistencias a
                                    INNER JOIN procesos pr ON a.id_proceso = pr.id_proceso
-                                   INNER JOIN pasantes p ON pr.id_pasante = p.id_pasante
+                                   LEFT JOIN pasantes p ON pr.id_pasante = p.id_pasante
+                                   LEFT JOIN solicitudes_modalidad s ON s.id_proceso = pr.id_proceso
                                    INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
                                    WHERE a.fecha = CURDATE()
                                    ORDER BY a.id_asistencia DESC")->fetchAll();
@@ -484,9 +507,10 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             </tr>
                         <?php else: ?>
                             <?php foreach ($asistenciasHoyLista as $as): ?>
+                                <?php $nomT = trim(($as['nombres'] ?? '') . ' ' . ($as['apellidos'] ?? '')); if ($nomT === '') { $nomT = $as['sol_postulante'] ?? '-'; } ?>
                                 <tr>
-                                    <td><strong><?= htmlspecialchars($as['ci']) ?></strong></td>
-                                    <td><?= htmlspecialchars($as['nombres'] . ' ' . $as['apellidos']) ?></td>
+                                    <td><strong><?= htmlspecialchars($as['ci'] ?? $as['sol_ci'] ?? '-') ?></strong></td>
+                                    <td><?= htmlspecialchars($nomT) ?></td>
                                     <td><?= htmlspecialchars($as['modalidad']) ?></td>
                                     <td><span class="badge badge-success"><i class="fa-regular fa-clock"></i> <?= htmlspecialchars($as['hora_entrada'] ?? '--:--') ?></span></td>
                                     <td>
@@ -501,11 +525,20 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     </td>
                                     <td>
                                         <span class="badge badge-success"><?= htmlspecialchars($as['estado']) ?></span>
+                                        <?php if (!empty($as['fuera_horario'])): ?>
+                                            <br><span class="badge badge-warning" style="margin-top: 4px;">FUERA DE HORARIO</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
-                                        <a href="../pasantes/credencial_qr.php?id=<?= $as['id_pasante'] ?? '' ?>" class="btn btn-outline btn-sm" title="Ver Credencial" style="padding: 4px 8px;">
+                                        <?php if (!empty($as['id_pasante'])): ?>
+                                        <a href="../pasantes/credencial_qr.php?id=<?= $as['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Ver Credencial" style="padding: 4px 8px;">
                                             <i class="fa-solid fa-qrcode"></i> Carnet
                                         </a>
+                                        <?php else: ?>
+                                        <a href="../pasantes/credencial_qr.php?id_proceso=<?= $as['id_proceso'] ?>" class="btn btn-outline btn-sm" title="Ver Credencial" style="padding: 4px 8px;">
+                                            <i class="fa-solid fa-qrcode"></i> Carnet
+                                        </a>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
