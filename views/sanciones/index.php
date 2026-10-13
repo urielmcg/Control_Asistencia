@@ -156,7 +156,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
             </div>
         <?php endif; ?>
 
-        <div style="margin-bottom: 20px;">
+        <div class="no-print" style="margin-bottom: 20px;">
             <?php if ($esStaff): ?>
             <button type="button" class="btn btn-danger" onclick="document.getElementById('modalSancion').style.display='flex'">
                 <i class="fa-solid fa-gavel"></i> Registrar Sanción
@@ -242,10 +242,15 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <div>
                     <h3 class="card-title"><?= $esStaff ? 'Registro de Sanciones Aplicadas' : 'Mis Sanciones' ?></h3>
                 </div>
-                <span class="badge badge-danger"><?= count($sanciones) ?> registros</span>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <span class="badge badge-danger"><?= count($sanciones) ?> registros</span>
+                    <button onclick="window.print()" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-print"></i> Imprimir Reporte
+                    </button>
+                </div>
             </div>
 
-                <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                <div class="no-print" style="display: flex; gap: 10px; margin-bottom: 16px;">
                     <a href="index.php?f=activas" class="btn btn-sm <?= $filtroS === 'activas' ? 'btn-primary' : 'btn-outline' ?>">
                         Activas
                     </a>
@@ -333,6 +338,64 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </table>
                 </div>
             </div>
+        <!-- Versión tabular solo para impresión/PDF (invisible en pantalla) -->
+        <?php $totalDescuento = 0;
+        foreach ($sanciones as $s) { $totalDescuento += (float)$s['horas_descontadas']; } ?>
+        <div class="print-report">
+            <div class="print-watermark" aria-hidden="true">
+                <img src="<?= APP_ROOT ?>assets/img/ccdb/imagen_fondo_sin.png" alt="">
+            </div>
+            <div class="print-report-head">
+                <h2>Reporte de Sanciones <?= $filtroS === 'cumplidas' ? 'Cumplidas' : 'Activas' ?></h2>
+                <p>Alcance: <?= $esStaff ? 'general' : 'personal' ?>. Documento oficial de control disciplinario CCDB.</p>
+                <p><strong>Fecha del reporte:</strong> <?= date('d/m/Y') ?></p>
+            </div>
+            <table class="print-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Pasante</th>
+                        <th>Tipo</th>
+                        <th>Motivo</th>
+                        <th>Descuento</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($sanciones as $s): ?>
+                        <tr>
+                            <td><?= htmlspecialchars(date('d/m/Y', strtotime($s['fecha']))) ?></td>
+                            <td>
+                                <?php if (!empty($s['ci'])): ?>
+                                    <strong><?= htmlspecialchars(($s['nombres'] ?? '') . ' ' . ($s['apellidos'] ?? '')) ?></strong><br>
+                                    <small>CI: <?= htmlspecialchars($s['ci']) ?></small>
+                                <?php else: ?>
+                                    <?= htmlspecialchars($s['modalidad'] ?? 'Modalidad') ?> #<?= $s['id_proceso'] ?>
+                                <?php endif; ?>
+                            </td>
+                            <td><?= htmlspecialchars($s['tipo_sancion']) ?></td>
+                            <td><?= htmlspecialchars($s['motivo']) ?></td>
+                            <td>-<?= $s['horas_descontadas'] ?> hrs</td>
+                            <td><?= htmlspecialchars($s['estado']) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <tr>
+                        <td colspan="4" style="text-align: right;"><strong>Total</strong></td>
+                        <td><strong>-<?= $totalDescuento ?> hrs</strong></td>
+                        <td><?= count($sanciones) ?> registros</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p class="print-foot">Documento generado por el Sistema de Control y Seguimiento de Pasantes CCDB.</p>
+        </div>
+
+<style>
+@media print {
+    #modalSancion, .btn, .no-print {
+        display: none !important;
+    }
+}
+</style>
         </main>
 
     <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
