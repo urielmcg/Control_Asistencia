@@ -78,13 +78,13 @@ function fechaEntregaSancion(DateTime $fecha, $exceso) {
 
 /**
  * Automatically registers an ATRASO sanction when entry is late.
- * Late = minutes past 09:00 (floor). On-time entries return null.
+ * Late = minutes past the scheduled start ($horaRef, default 09:00:00). On-time entries return null.
  * Skips when an ATRASO sanction already exists for the process and date.
  *
  * @return string|null Human-readable summary of the created sanction.
  */
-function registrarSancionAtrasoAuto($db, $idProceso, $horaEntrada, $fecha) {
-    $ref = strtotime('09:00:00');
+function registrarSancionAtrasoAuto($db, $idProceso, $horaEntrada, $fecha, $horaRef = '09:00:00') {
+    $ref = strtotime($horaRef);
     $ent = strtotime($horaEntrada);
     if ($ent === false || $ent <= $ref) {
         return null;
