@@ -391,8 +391,15 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
 <style>
 @media print {
-    #modalSancion, .btn, .no-print {
+    .sidebar, .top-navbar, .main-footer, #modalSancion, .btn, .no-print {
         display: none !important;
+    }
+    .main-wrapper {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+    .print-table {
+        border: 1px solid #0d3b66 !important;
     }
 }
 </style>

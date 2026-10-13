@@ -757,9 +757,9 @@ body {
     top: 50% !important;
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
-    width: 650px !important;
-    max-width: 85% !important;
-    opacity: 0.14 !important;
+    width: 400px !important;
+    max-width: 70% !important;
+    opacity: 0.08 !important;
     z-index: 9999 !important;
     pointer-events: none !important;
     -webkit-print-color-adjust: exact !important;
