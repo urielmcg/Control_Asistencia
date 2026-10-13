@@ -30,5 +30,8 @@ probe.html
 # PHP logs
 *.log
 
+# Local Aiven credentials (never commit)
+set-aiven.ps1
+
 # Uploaded pasante documents (runtime data)
 uploads/
