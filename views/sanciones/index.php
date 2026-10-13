@@ -400,6 +400,13 @@ require_once __DIR__ . '/../../includes/sidebar.php';
     }
     .print-table {
         border: 1px solid #0d3b66 !important;
+        border-collapse: collapse !important;
+        outline: 1px solid #0d3b66 !important;
+        outline-offset: -1px !important;
+    }
+    .print-table tr {
+        break-inside: auto !important;
+        page-break-inside: auto !important;
     }
 }
 </style>
