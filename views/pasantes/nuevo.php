@@ -23,15 +23,16 @@ $docFields = [
 $allowedExt = ['pdf' => 'application/pdf', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png'];
 $maxBytes = 8 * 1024 * 1024;
 
-// Cargar Universidades e Instituciones
+// Cargar Universidades e Instituciones (sugerencias para el texto libre)
 $instituciones = $db->query("SELECT id_institucion, nombre FROM instituciones WHERE estado = 1 ORDER BY nombre ASC")->fetchAll();
+$carrerasSugeridas = $db->query("SELECT DISTINCT nombre FROM carreras WHERE estado = 1 ORDER BY nombre ASC")->fetchAll(PDO::FETCH_COLUMN);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $ci = trim($_POST['ci'] ?? '');
     $nombres = trim($_POST['nombres'] ?? '');
     $apellidos = trim($_POST['apellidos'] ?? '');
-    $id_universidad = (int)($_POST['id_universidad'] ?? 0);
-    $id_carrera = (int)($_POST['id_carrera'] ?? 0);
+    $universidad = trim($_POST['universidad'] ?? '');
+    $carrera = trim($_POST['carrera'] ?? '');
     $correo = trim($_POST['correo'] ?? '');
     $telefono = trim($_POST['telefono'] ?? '');
     $semestre = trim($_POST['semestre'] ?? '');
@@ -42,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fecha_fin = trim($_POST['fecha_fin'] ?? '');
     $direccion = trim($_POST['direccion'] ?? '');
 
-    if (empty($ci) || empty($nombres) || $id_universidad <= 0 || $id_carrera <= 0
+    if (empty($ci) || empty($nombres) || $universidad === '' || $carrera === ''
         || empty($usuario_acceso) || empty($password) || empty($correo) || empty($fecha_nacimiento)
         || empty($fecha_inicio) || empty($fecha_fin)) {
         $error = 'Por favor complete todos los campos obligatorios (*).';
@@ -111,10 +112,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($stmtCheck->fetch()) {
                     throw new Exception("El número de CI $ci ya se encuentra registrado en el sistema.");
                 }
-                $stmtUser = $db->prepare("SELECT id_usuario FROM usuarios WHERE usuario = :u OR ci = :ci");
-                $stmtUser->execute([':u' => $usuario_acceso, ':ci' => $ci]);
-                if ($stmtUser->fetch()) {
-                    throw new Exception('El usuario de acceso o el CI ya existen en usuarios.');
+                $stmtUserU = $db->prepare("SELECT id_usuario FROM usuarios WHERE usuario = :u");
+                $stmtUserU->execute([':u' => $usuario_acceso]);
+                if ($stmtUserU->fetch()) {
+                    throw new Exception("El nombre de usuario '$usuario_acceso' ya está en uso. Elegí otro nombre de usuario.");
+                }
+                $stmtUserC = $db->prepare("SELECT id_usuario FROM usuarios WHERE ci = :ci");
+                $stmtUserC->execute([':ci' => $ci]);
+                if ($stmtUserC->fetch()) {
+                    throw new Exception("Ese CI ya tiene un usuario de acceso creado antes (por ejemplo desde una Solicitud de Modalidad). Pedí en recepción que lo vinculen en vez de crear otro.");
+                }
+
+                // Texto libre con reutilización de catálogos: si no existen, se crean
+                $stmtUni = $db->prepare("SELECT id_institucion FROM instituciones WHERE nombre = :n LIMIT 1");
+                $stmtUni->execute([':n' => $universidad]);
+                $id_universidad = $stmtUni->fetchColumn();
+                if (!$id_universidad) {
+                    $stmtNewUni = $db->prepare("INSERT INTO instituciones (id_tipo_institucion, nombre, estado) VALUES (2, :n, 1)");
+                    try {
+                        $stmtNewUni->execute([':n' => $universidad]);
+                        $id_universidad = (int)$db->lastInsertId();
+                    } catch (Exception $eDup) {
+                        $stmtUni->execute([':n' => $universidad]);
+                        $id_universidad = $stmtUni->fetchColumn();
+                    }
+                }
+                $stmtCar = $db->prepare("SELECT id_carrera FROM carreras WHERE id_universidad = :u AND nombre = :n LIMIT 1");
+                $stmtCar->execute([':u' => $id_universidad, ':n' => $carrera]);
+                $id_carrera = $stmtCar->fetchColumn();
+                if (!$id_carrera) {
+                    $stmtNewCar = $db->prepare("INSERT INTO carreras (id_universidad, nombre, estado) VALUES (:u, :n, 1)");
+                    try {
+                        $stmtNewCar->execute([':u' => $id_universidad, ':n' => $carrera]);
+                        $id_carrera = (int)$db->lastInsertId();
+                    } catch (Exception $eDup) {
+                        $stmtCar->execute([':u' => $id_universidad, ':n' => $carrera]);
+                        $id_carrera = $stmtCar->fetchColumn();
+                    }
                 }
 
                 // Access account for the pasante
@@ -309,21 +343,22 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </h4>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label for="id_universidad">Universidad / Instituto de Origen *</label>
-                        <select id="id_universidad" name="id_universidad" class="form-control" required onchange="cargarCarreras(this.value)">
-                            <option value="">-- Seleccionar Institución --</option>
+                        <label for="universidad">Universidad / Instituto de Origen *</label>
+                        <input type="text" id="universidad" name="universidad" class="form-control" required list="lista_universidades" placeholder="Escriba el nombre" value="<?= htmlspecialchars($_POST['universidad'] ?? '') ?>">
+                        <datalist id="lista_universidades">
                             <?php foreach ($instituciones as $inst): ?>
-                                <option value="<?= $inst['id_institucion'] ?>" <?= (isset($_POST['id_universidad']) && $_POST['id_universidad'] == $inst['id_institucion']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($inst['nombre']) ?>
-                                </option>
+                                <option value="<?= htmlspecialchars($inst['nombre']) ?>"></option>
                             <?php endforeach; ?>
-                        </select>
+                        </datalist>
                     </div>
                     <div class="form-group">
-                        <label for="id_carrera">Carrera *</label>
-                        <select id="id_carrera" name="id_carrera" class="form-control" required>
-                            <option value="">-- Seleccione primero una universidad --</option>
-                        </select>
+                        <label for="carrera">Carrera *</label>
+                        <input type="text" id="carrera" name="carrera" class="form-control" required list="lista_carreras" placeholder="Escriba la carrera" value="<?= htmlspecialchars($_POST['carrera'] ?? '') ?>">
+                        <datalist id="lista_carreras">
+                            <?php foreach ($carrerasSugeridas as $nombreCar): ?>
+                                <option value="<?= htmlspecialchars($nombreCar) ?>"></option>
+                            <?php endforeach; ?>
+                        </datalist>
                     </div>
                 </div>
 
@@ -392,39 +427,3 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
     <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
 </div>
-
-<script>
-function cargarCarreras(idUni, selectedId = null) {
-    const selCarrera = document.getElementById('id_carrera');
-    selCarrera.innerHTML = '<option value="">Cargando carreras...</option>';
-    if (!idUni) {
-        selCarrera.innerHTML = '<option value="">-- Seleccione primero una universidad --</option>';
-        return;
-    }
-    fetch('<?= APP_ROOT ?>api/get_carreras.php?id_universidad=' + idUni)
-        .then(response => response.json())
-        .then(data => {
-            selCarrera.innerHTML = '<option value="">-- Seleccionar Carrera --</option>';
-            data.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id_carrera;
-                opt.textContent = c.nombre;
-                if (selectedId && c.id_carrera == selectedId) {
-                    opt.selected = true;
-                }
-                selCarrera.appendChild(opt);
-            });
-        })
-        .catch(err => {
-            console.error(err);
-            selCarrera.innerHTML = '<option value="">Error al cargar carreras</option>';
-        });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const uniVal = document.getElementById('id_universidad').value;
-    if (uniVal) {
-        cargarCarreras(uniVal, '<?= $_POST['id_carrera'] ?? '' ?>');
-    }
-});
-</script>
