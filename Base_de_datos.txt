@@ -338,6 +338,8 @@ CREATE TABLE asistencias (
 
     estado VARCHAR(30) NOT NULL DEFAULT 'PRESENTE',
 
+    fuera_horario TINYINT(1) NOT NULL DEFAULT 0,
+
     observacion TEXT,
 
     fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -552,6 +554,42 @@ ALTER TABLE procesos ADD CONSTRAINT fk_procesos_turno
     ON DELETE SET NULL;
 
 -- Turnos iniciales: (1, 'Mañana', '09:00:00', '12:00:00'), (2, 'Tarde', '15:00:00', '18:00:00')
+
+
+-- ============================================================
+-- 18B. TABLA: HORARIO SEMANAL POR PROCESO (PROCESO_DIAS)
+-- ============================================================
+-- Turno por día, lunes a sábado (dia_semana ISO: 1=Lunes ... 6=Sábado).
+-- Sin fila = el pasante no viene ese día. Si un proceso no tiene
+-- filas, rige procesos.id_turno (compatibilidad hacia atrás).
+
+CREATE TABLE proceso_dias (
+    id_proceso_dia INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    id_proceso INT UNSIGNED NOT NULL,
+    dia_semana TINYINT UNSIGNED NOT NULL,
+    id_turno INT UNSIGNED NOT NULL,
+
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_procesodias_proceso
+        FOREIGN KEY (id_proceso)
+        REFERENCES procesos(id_proceso)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_procesodias_turno
+        FOREIGN KEY (id_turno)
+        REFERENCES turnos(id_turno)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT uq_procesodias_proceso_dia
+        UNIQUE (id_proceso, dia_semana),
+
+    CONSTRAINT chk_procesodias_dia
+        CHECK (dia_semana BETWEEN 1 AND 6)
+) ENGINE=InnoDB;
 
 
 -- ============================================================

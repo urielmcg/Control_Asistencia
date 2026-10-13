@@ -220,6 +220,7 @@ CREATE TABLE IF NOT EXISTS asistencias (
         END
     ) VIRTUAL,
     estado VARCHAR(30) NOT NULL DEFAULT 'PRESENTE',
+    fuera_horario TINYINT(1) NOT NULL DEFAULT 0,
     observacion TEXT,
     fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_asistencias_proceso
@@ -360,6 +361,30 @@ INSERT IGNORE INTO turnos (id_turno, nombre, hora_inicio, hora_fin) VALUES
 (1, 'Mañana', '09:00:00', '12:00:00'),
 (2, 'Tarde', '15:00:00', '18:00:00');
 
+-- 18B. TABLA: HORARIO SEMANAL POR PROCESO (turno por día, lunes a sábado)
+-- dia_semana usa ISO-8601 (PHP date('N')): 1=Lunes ... 6=Sábado. Sin fila = no viene ese día.
+CREATE TABLE IF NOT EXISTS proceso_dias (
+    id_proceso_dia INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    id_proceso INT UNSIGNED NOT NULL,
+    dia_semana TINYINT UNSIGNED NOT NULL,
+    id_turno INT UNSIGNED NOT NULL,
+    fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_procesodias_proceso
+        FOREIGN KEY (id_proceso)
+        REFERENCES procesos(id_proceso)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_procesodias_turno
+        FOREIGN KEY (id_turno)
+        REFERENCES turnos(id_turno)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+    CONSTRAINT uq_procesodias_proceso_dia
+        UNIQUE (id_proceso, dia_semana),
+    CONSTRAINT chk_procesodias_dia
+        CHECK (dia_semana BETWEEN 1 AND 6)
+) ENGINE=InnoDB;
+
 -- 19. TABLA: SOLICITUDES DE MODALIDAD (datos de carta del postulante)
 CREATE TABLE IF NOT EXISTS solicitudes_modalidad (
     id_solicitud INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -398,6 +423,7 @@ CREATE INDEX idx_procesos_modalidad ON procesos(id_modalidad);
 CREATE INDEX idx_procesos_estado ON procesos(estado);
 CREATE INDEX idx_asistencias_fecha ON asistencias(fecha);
 CREATE INDEX idx_asistencias_proceso_fecha ON asistencias(id_proceso, fecha);
+CREATE INDEX idx_procesodias_proceso ON proceso_dias(id_proceso);
 CREATE INDEX idx_sanciones_fecha ON sanciones(fecha);
 CREATE INDEX idx_auditoria_fecha ON auditoria(fecha);
 
