@@ -116,8 +116,19 @@ $sqlSan = "SELECT s.*, ts.nombre AS tipo_sancion, p.nombres, p.apellidos, p.ci, 
                          WHERE s.estado = :est ";
 $paramsSan = [':est' => $filtroS === 'cumplidas' ? 'CUMPLIDA' : 'ACTIVA'];
 if (!$esStaff) {
-    $sqlSan .= " AND EXISTS (SELECT 1 FROM pasantes px WHERE px.id_pasante = pr.id_pasante AND px.ci = :ci) ";
-    $paramsSan[':ci'] = trim(Auth::user()['ci'] ?? '');
+    require_once __DIR__ . '/../../includes/proceso_propio.php';
+    $ppSan = procesosPropios($db);
+    if (empty($ppSan)) {
+        $sqlSan .= " AND 1 = 0 ";
+    } else {
+        $phs = [];
+        foreach ($ppSan as $i => $idp) {
+            $k = ':pps' . $i;
+            $phs[] = $k;
+            $paramsSan[$k] = $idp;
+        }
+        $sqlSan .= " AND s.id_proceso IN (" . implode(',', $phs) . ") ";
+    }
 }
 $sqlSan .= " ORDER BY s.fecha DESC, s.id_sancion DESC";
 $stmtSan = $db->prepare($sqlSan);

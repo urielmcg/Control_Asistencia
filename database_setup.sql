@@ -437,8 +437,10 @@ SELECT
     pas.nombres,
     pas.apellidos,
     pas.ci,
+    s.postulante AS sol_postulante,
+    s.ci AS sol_ci,
     inst.nombre AS institucion,
-    car.nombre AS carrera,
+    COALESCE(car.nombre, s.carrera) AS carrera,
     COALESCE(m.nombre, 'Pasantía') AS modalidad,
     p.horas_requeridas,
     p.estado AS estado_proceso,
@@ -512,10 +514,11 @@ SELECT
         ), 2
     ) AS porcentaje_completado
 FROM procesos p
-INNER JOIN pasantes pas ON p.id_pasante = pas.id_pasante
+LEFT JOIN pasantes pas ON p.id_pasante = pas.id_pasante
 INNER JOIN instituciones inst ON p.id_institucion = inst.id_institucion
 LEFT JOIN modalidades m ON p.id_modalidad = m.id_modalidad
-INNER JOIN carreras car ON pas.id_carrera = car.id_carrera
+LEFT JOIN carreras car ON pas.id_carrera = car.id_carrera
+LEFT JOIN solicitudes_modalidad s ON s.id_proceso = p.id_proceso
 LEFT JOIN asistencias a ON p.id_proceso = a.id_proceso
 WHERE p.horas_requeridas IS NOT NULL AND p.horas_requeridas > 0
   AND (m.nombre IS NULL OR m.nombre <> 'Proyecto de Grado')
@@ -527,6 +530,9 @@ GROUP BY
     pas.ci,
     inst.nombre,
     car.nombre,
+    s.postulante,
+    s.ci,
+    s.carrera,
     m.nombre,
     p.horas_requeridas,
     p.estado;

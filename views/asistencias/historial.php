@@ -16,13 +16,14 @@ $fecha_hasta = trim($_GET['fecha_hasta'] ?? '');
 // Filtro por proceso (solicitudes sin pasante vinculado): solo staff
 $id_proceso_f = (!Auth::isPasante()) ? (int)($_GET['id_proceso'] ?? 0) : 0;
 
-// Interns only ever see their own records, regardless of URL parameters
+// Staff ve todo; el resto solo ve sus procesos (pasante o modalidad sin pasante)
 $esPropio = false;
+$procesosPropios = null;
 if (Auth::isPasante()) {
-    $stmtOwn = $db->prepare("SELECT id_pasante FROM pasantes WHERE ci = :ci LIMIT 1");
-    $stmtOwn->execute([':ci' => trim(Auth::user()['ci'] ?? '')]);
-    $own = $stmtOwn->fetch();
-    $id_pasante = $own ? (int)$own['id_pasante'] : -1;
+    require_once __DIR__ . '/../../includes/proceso_propio.php';
+    $procesosPropios = procesosPropios($db);
+    $id_pasante = 0;
+    $id_proceso_f = 0;
     $esPropio = true;
 }
 
@@ -43,7 +44,7 @@ $tabH = $_GET['tab'] ?? 'pasantes';
 if (!in_array($tabH, ['pasantes', 'td', 'pg'], true)) {
     $tabH = 'pasantes';
 }
-if ($id_proceso_f <= 0) {
+if ($id_proceso_f <= 0 && $procesosPropios === null) {
 if ($tabH === 'td') {
     $sql .= " AND m.nombre = 'Trabajo Dirigido' ";
 } elseif ($tabH === 'pg') {
@@ -56,6 +57,18 @@ if ($tabH === 'td') {
 if ($id_proceso_f > 0) {
     $sql .= " AND a.id_proceso = :id_proceso ";
     $params[':id_proceso'] = $id_proceso_f;
+} elseif ($procesosPropios !== null) {
+    if (empty($procesosPropios)) {
+        $sql .= " AND 1 = 0 ";
+    } else {
+        $ph = [];
+        foreach ($procesosPropios as $i => $idp) {
+            $k = ':pp' . $i;
+            $ph[] = $k;
+            $params[$k] = $idp;
+        }
+        $sql .= " AND a.id_proceso IN (" . implode(',', $ph) . ") ";
+    }
 } elseif ($id_pasante > 0) {
     $sql .= " AND p.id_pasante = :id_pasante ";
     $params[':id_pasante'] = $id_pasante;
@@ -116,6 +129,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <?php endif; ?>
             </div>
 
+            <?php if (!$esPropio): ?>
             <div style="display: flex; gap: 10px; margin-bottom: 16px;">
                 <?php foreach (['pasantes' => 'Pasantes', 'td' => 'Trabajo Dirigido', 'pg' => 'Proyecto de Grado'] as $key => $label): ?>
                     <a href="historial.php?tab=<?= $key ?>" class="btn btn-sm <?= $tabH === $key ? 'btn-primary' : 'btn-outline' ?>">
@@ -123,6 +137,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     </a>
                 <?php endforeach; ?>
             </div>
+            <?php endif; ?>
 
             <!-- Filtros -->
             <form method="GET" action="historial.php" style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; background: #f8fafc; padding: 16px; border-radius: 8px;">

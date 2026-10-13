@@ -13,13 +13,13 @@ $db = Database::getConnection();
 // Filtro por pasante específico y por track
 $id_pasante = isset($_GET['id_pasante']) ? (int)$_GET['id_pasante'] : 0;
 $trackFiltro = $_GET['track'] ?? 'todos';
-// Pasantes solo ven su propio reporte, sin importar parámetros URL
+// Alcance propio: pasante o modalidad sin pasante ven solo sus procesos
 $esPropio = false;
+$procesosPropios = null;
 if (Auth::isPasante()) {
-    $stmtOwn = $db->prepare("SELECT id_pasante FROM pasantes WHERE ci = :ci LIMIT 1");
-    $stmtOwn->execute([':ci' => trim(Auth::user()['ci'] ?? '')]);
-    $own = $stmtOwn->fetch();
-    $id_pasante = $own ? (int)$own['id_pasante'] : -1;
+    require_once __DIR__ . '/../../includes/proceso_propio.php';
+    $procesosPropios = procesosPropios($db);
+    $id_pasante = 0;
     $esPropio = true;
 }
 if (!in_array($trackFiltro, ['todos', 'pasantes', 'td', 'pg'], true)) {
@@ -35,12 +35,28 @@ if ($id_pasante > 0) {
     $sql .= " AND v.id_pasante = " . $id_pasante;
 }
 
+if ($procesosPropios !== null) {
+    if (empty($procesosPropios)) {
+        $sql .= " AND 1 = 0 ";
+    } else {
+        $sql .= " AND v.id_proceso IN (" . implode(',', $procesosPropios) . ") ";
+    }
+}
+
 $sql .= " ORDER BY v.porcentaje_completado DESC";
 $reportes = $db->query($sql)->fetchAll();
 
 // Split hour tracks: pure interns vs Trabajo Dirigido
 $gruposHoras = ['Pasantes' => [], 'Trabajo Dirigido' => []];
 foreach ($reportes as $rep) {
+    // Solicitudes sin pasante: nombre, CI y carrera salen de la solicitud
+    if (trim(($rep['nombres'] ?? '') . ' ' . ($rep['apellidos'] ?? '')) === '' && !empty($rep['sol_postulante'])) {
+        $rep['nombres'] = $rep['sol_postulante'];
+        $rep['apellidos'] = '';
+    }
+    if (empty($rep['ci'])) {
+        $rep['ci'] = $rep['sol_ci'] ?? '-';
+    }
     if (($rep['modalidad'] ?? '') === 'Trabajo Dirigido') {
         $gruposHoras['Trabajo Dirigido'][] = $rep;
     } else {
@@ -61,6 +77,19 @@ $pgSql = "SELECT pr.id_proceso, p.id_pasante, p.nombres, p.apellidos, p.ci, s.po
 $pgParams = [];
 if ($id_pasante > 0) {
     $pgSql .= " AND p.id_pasante = " . $id_pasante;
+}
+if ($procesosPropios !== null) {
+    if (empty($procesosPropios)) {
+        $pgSql .= " AND 1 = 0 ";
+    } else {
+        $phg = [];
+        foreach ($procesosPropios as $i => $idp) {
+            $k = ':ppg' . $i;
+            $phg[] = $k;
+            $pgParams[$k] = $idp;
+        }
+        $pgSql .= " AND pr.id_proceso IN (" . implode(',', $phg) . ") ";
+    }
 }
 $pgSql .= " GROUP BY pr.id_proceso ORDER BY COALESCE(p.apellidos, s.postulante)";
 $stmtPg = $db->prepare($pgSql);
