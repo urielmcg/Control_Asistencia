@@ -106,6 +106,24 @@ if ($id_proceso_f > 0) {
 // Lista de pasantes para el selector de filtro
 $listaPasantes = $db->query("SELECT id_pasante, nombres, apellidos, ci FROM pasantes ORDER BY apellidos ASC")->fetchAll();
 
+// Resumen del alcance filtrado (un pasante, un proceso o vista propia)
+$resumen = null;
+if (!empty($asistencias) && ($id_pasante > 0 || $id_proceso_f > 0 || $esPropio)) {
+    $diasSet = [];
+    $horasTot = 0.0;
+    $fhTot = 0;
+    foreach ($asistencias as $a) {
+        if (!empty($a['hora_entrada'])) {
+            $diasSet[$a['fecha']] = true;
+        }
+        $horasTot += (float)($a['horas_calculadas'] ?? 0);
+        if (!empty($a['fuera_horario'])) {
+            $fhTot++;
+        }
+    }
+    $resumen = ['dias' => count($diasSet), 'horas' => round($horasTot, 2), 'fh' => $fhTot, 'filas' => count($asistencias)];
+}
+
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
 ?>
@@ -176,6 +194,28 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </div>
             </form>
 
+            <?php if ($resumen): ?>
+            <div class="no-print" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 14px;">
+                    <div style="font-size: 0.72rem; color: #15803d; font-weight: 600;">DÍAS ASISTIDOS</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; color: #15803d;"><?= $resumen['dias'] ?></div>
+                </div>
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 14px;">
+                    <div style="font-size: 0.72rem; color: #1d4ed8; font-weight: 600;">HORAS TOTALES</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; color: #1d4ed8;"><?= $resumen['horas'] ?></div>
+                </div>
+                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px;">
+                    <div style="font-size: 0.72rem; color: #b45309; font-weight: 600;">FUERA DE HORARIO</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; color: #b45309;"><?= $resumen['fh'] ?></div>
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                    <button onclick="window.print()" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-print"></i> Imprimir Reporte
+                    </button>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <div class="table-responsive">
                 <?php if ($procesoCtx): ?>
                     <div class="alert alert-info" style="margin-bottom: 12px;">
@@ -226,6 +266,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     </td>
                                     <td>
                                         <span class="badge badge-secondary"><?= htmlspecialchars($as['estado']) ?></span>
+                                        <?php if (!empty($as['fuera_horario'])): ?>
+                                            <br><span class="badge badge-warning" style="margin-top: 4px;">FUERA DE HORARIO</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td style="font-size: 0.8rem; color: var(--text-muted);">
                                         <?= htmlspecialchars($as['observacion'] ?? '-') ?>
@@ -237,6 +280,54 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 </table>
             </div>
         </div>
+        <!-- Versión tabular solo para impresión/PDF (invisible en pantalla) -->
+        <div class="print-report">
+            <div class="print-watermark" aria-hidden="true">
+                <img src="<?= APP_ROOT ?>assets/img/ccdb/imagen_fondo_sin.png" alt="">
+            </div>
+            <div class="print-report-head">
+                <h2>Historial de Asistencias</h2>
+                <p>Auditoría de entradas, salidas y tiempo efectivo.</p>
+                <p><strong>Fecha del reporte:</strong> <?= date('d/m/Y') ?><?php if (!empty($fecha_desde) || !empty($fecha_hasta)): ?> · Rango: <?= htmlspecialchars($fecha_desde ?: '...') ?> – <?= htmlspecialchars($fecha_hasta ?: '...') ?><?php endif; ?></p>
+                <?php if ($resumen): ?>
+                <p><strong>Resumen:</strong> <?= $resumen['dias'] ?> días asistidos · <?= $resumen['horas'] ?> hrs · <?= $resumen['fh'] ?> fuera de horario (<?= $resumen['filas'] ?> registros).</p>
+                <?php endif; ?>
+            </div>
+            <table class="print-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Pasante</th>
+                        <th>Entrada</th>
+                        <th>Salida</th>
+                        <th>Horas</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($asistencias as $as): ?>
+                    <?php $nomP = trim(($as['nombres'] ?? '') . ' ' . ($as['apellidos'] ?? '')); if ($nomP === '') { $nomP = $as['sol_postulante'] ?? '-'; } ?>
+                    <tr>
+                        <td><?= htmlspecialchars(date('d/m/Y', strtotime($as['fecha']))) ?></td>
+                        <td><strong><?= htmlspecialchars($nomP) ?></strong><br><small>CI: <?= htmlspecialchars($as['ci'] ?? $as['sol_ci'] ?? '-') ?></small></td>
+                        <td><?= htmlspecialchars($as['hora_entrada'] ?? '-') ?></td>
+                        <td><?= htmlspecialchars($as['hora_salida'] ?? 'Sin registrar') ?></td>
+                        <td><?= !empty($as['horas_calculadas']) ? htmlspecialchars($as['horas_calculadas']) . ' hrs' : '-' ?></td>
+                        <td><?= htmlspecialchars($as['estado']) ?><?= !empty($as['fuera_horario']) ? ' (FUERA DE HORARIO)' : '' ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <p class="print-foot">Documento generado por el Sistema de Control y Seguimiento de Pasantes CCDB.</p>
+        </div>
+
+<style>
+@media print {
+    .btn, .no-print {
+        display: none !important;
+    }
+}
+</style>
     </main>
 
     <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
