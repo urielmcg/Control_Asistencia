@@ -49,11 +49,12 @@ foreach ($reportes as $rep) {
 }
 
 // Proyecto de Grado: presence in days (Mon-Sat), no hour goal
-$pgSql = "SELECT pr.id_proceso, p.id_pasante, p.nombres, p.apellidos, p.ci, pr.fecha_inicio, pr.fecha_fin,
+$pgSql = "SELECT pr.id_proceso, p.id_pasante, p.nombres, p.apellidos, p.ci, s.postulante AS sol_postulante, s.ci AS sol_ci, pr.fecha_inicio, pr.fecha_fin,
                  COUNT(DISTINCT CASE WHEN DAYOFWEEK(a.fecha) <> 1 AND a.hora_entrada IS NOT NULL THEN a.fecha END) AS dias_asistidos,
                  ROUND(COALESCE(SUM(CASE WHEN a.hora_entrada IS NOT NULL AND a.hora_salida IS NOT NULL THEN TIME_TO_SEC(TIMEDIFF(a.hora_salida, a.hora_entrada)) / 3600.0 ELSE 0 END), 0), 2) AS horas_reg
           FROM procesos pr
-          INNER JOIN pasantes p ON pr.id_pasante = p.id_pasante
+          LEFT JOIN pasantes p ON pr.id_pasante = p.id_pasante
+          LEFT JOIN solicitudes_modalidad s ON s.id_proceso = pr.id_proceso
           INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
           LEFT JOIN asistencias a ON a.id_proceso = pr.id_proceso
           WHERE pr.estado = 'EN_CURSO' AND m.nombre = 'Proyecto de Grado'";
@@ -61,11 +62,19 @@ $pgParams = [];
 if ($id_pasante > 0) {
     $pgSql .= " AND p.id_pasante = " . $id_pasante;
 }
-$pgSql .= " GROUP BY pr.id_proceso ORDER BY p.apellidos";
+$pgSql .= " GROUP BY pr.id_proceso ORDER BY COALESCE(p.apellidos, s.postulante)";
 $stmtPg = $db->prepare($pgSql);
 $stmtPg->execute($pgParams);
 $pgRows = [];
 foreach ($stmtPg->fetchAll() as $g) {
+    // Solicitudes sin pasante: nombre y CI salen de la solicitud
+    if (trim(($g['nombres'] ?? '') . ' ' . ($g['apellidos'] ?? '')) === '' && !empty($g['sol_postulante'])) {
+        $g['nombres'] = $g['sol_postulante'];
+        $g['apellidos'] = '';
+    }
+    if (empty($g['ci'])) {
+        $g['ci'] = $g['sol_ci'] ?? '-';
+    }
     $metaMeses = 6;
     if (!empty($g['fecha_inicio']) && !empty($g['fecha_fin'])) {
         $dd1 = new DateTime($g['fecha_inicio']);
