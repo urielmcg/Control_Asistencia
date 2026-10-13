@@ -22,6 +22,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $carrera = trim($_POST['carrera'] ?? '');
     $id_turno = (int)($_POST['id_turno'] ?? 0);
     $meses = (int)($_POST['meses'] ?? 0);
+    $diasPost = (is_array($_POST['dias'] ?? null)) ? $_POST['dias'] : [];
+
+    $diasSemana = [1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles', 4 => 'Jueves', 5 => 'Viernes', 6 => 'Sábado'];
+    $horario = [];
+    foreach ($diasSemana as $num => $nombreDia) {
+        $id_t = (int)($diasPost[$num] ?? 0);
+        if ($id_t > 0) { $horario[$num] = $id_t; }
+    }
     $motivacion = trim($_POST['motivacion'] ?? '');
     $compromiso = trim($_POST['compromiso'] ?? '');
     $idea = trim($_POST['idea_tema'] ?? '');
@@ -39,6 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($postulante === '' || $universidad === '' || $carrera === '' || $id_turno <= 0
         || $meses <= 0 || $motivacion === '' || $compromiso === '') {
         $error = 'Por favor complete todos los campos obligatorios (*).';
+    } elseif (empty($horario)) {
+        $error = 'Asigná al menos un día de la semana con su turno en el horario semanal.';
     } elseif (!$esPG && ($horas_requeridas === '' || (int)$horas_requeridas <= 0)) {
         $error = 'Indique las horas requeridas según facultad (ej. 280, 300, 400, 800, 1000).';
     } elseif (($usuario_acceso !== '' || $password !== '' || $ci !== '') && ($usuario_acceso === '' || strlen($password) < 8 || $ci === '')) {
@@ -51,6 +61,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmtTurno->execute([':id' => $id_turno]);
             if (!$stmtTurno->fetch()) {
                 throw new Exception('Turno de acompañamiento inválido.');
+            }
+
+            // Valida que cada turno del horario semanal exista y esté activo
+            $turnosValidos = array_map('intval', $db->query("SELECT id_turno FROM turnos WHERE estado = 1")->fetchAll(PDO::FETCH_COLUMN));
+            foreach ($horario as $numDia => $idTurnoDia) {
+                if (!in_array($idTurnoDia, $turnosValidos, true)) {
+                    throw new Exception('Turno inválido en el horario semanal.');
+                }
             }
 
             // Optional access account for the applicant
@@ -82,6 +100,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':observacion'  => $descripcion !== '' ? $descripcion : null,
             ]);
             $id_proceso = (int)$db->lastInsertId();
+
+            $stmtDia = $db->prepare("INSERT INTO proceso_dias (id_proceso, dia_semana, id_turno) VALUES (:proc, :dia, :turno)");
+            foreach ($horario as $numDia => $idTurnoDia) {
+                $stmtDia->execute([':proc' => $id_proceso, ':dia' => $numDia, ':turno' => $idTurnoDia]);
+            }
 
             $stmtSol = $db->prepare("INSERT INTO solicitudes_modalidad (id_proceso, id_usuario, postulante, ci, universidad, carrera, meses_proyectados, motivacion, compromiso, idea_tema, descripcion)
                                      VALUES (:proc, :idu, :post, :ci, :uni, :car, :meses, :mot, :comp, :idea, :desc)");
@@ -193,6 +216,26 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         <label for="meses">Tiempo de presencia proyectado (meses) *</label>
                         <input type="number" name="meses" id="meses" class="form-control" required min="1" max="24" value="<?= htmlspecialchars($_POST['meses'] ?? '6') ?>">
                         <small style="color: var(--text-muted);">Calcula el tiempo previsto para concluir la modalidad según el periodo de titulación.</small>
+                    </div>
+                </div>
+
+                <div style="margin-top: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
+                    <label style="font-weight: 700; font-size: 0.85rem; color: #0f172a;">Horario semanal *</label>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 4px 0 12px 0;">Elegí el turno de cada día según los horarios administrables. Dejá "No viene" en los días libres.</p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">
+                        <?php foreach ([1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles', 4 => 'Jueves', 5 => 'Viernes', 6 => 'Sábado'] as $numDia => $nombreDia): ?>
+                        <div class="form-group" style="margin: 0;">
+                            <label for="dia_<?= $numDia ?>"><?= $nombreDia ?></label>
+                            <select name="dias[<?= $numDia ?>]" id="dia_<?= $numDia ?>" class="form-control">
+                                <option value="0">No viene</option>
+                                <?php foreach ($turnos as $t): ?>
+                                    <option value="<?= $t['id_turno'] ?>" <?= ((int)($diasPost[$numDia] ?? 0) === (int)$t['id_turno']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($t['nombre']) ?> · <?= htmlspecialchars(substr($t['hora_inicio'], 0, 5)) ?>–<?= htmlspecialchars(substr($t['hora_fin'], 0, 5)) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
 
