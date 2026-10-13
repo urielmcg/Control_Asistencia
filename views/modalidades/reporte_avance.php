@@ -291,7 +291,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         <!-- Versión tabular solo para impresión/PDF (invisible en pantalla) -->
         <div class="print-report">
             <div class="print-watermark" aria-hidden="true">
-                <img src="<?= APP_ROOT ?>assets/img/ccdb/imagen_fondo_sin.png" alt="">
+                <img src="<?= APP_ROOT ?>assets/img/ccdb/marca_agua_suave.png" alt="">
             </div>
             <div class="print-report-head">
                 <img src="<?= APP_ROOT ?>assets/img/ccdb/banner1_ccdb_sin_fondo.png" alt="CCDB" style="height: 64px; margin-bottom: 6px;">

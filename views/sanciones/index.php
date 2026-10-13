@@ -354,7 +354,7 @@ require_once __DIR__ . '/../../includes/sidebar.php';
         foreach ($sanciones as $s) { $totalDescuento += (float)$s['horas_descontadas']; } ?>
         <div class="print-report">
             <div class="print-watermark" aria-hidden="true">
-                <img src="<?= APP_ROOT ?>assets/img/ccdb/imagen_fondo_sin.png" alt="">
+                <img src="<?= APP_ROOT ?>assets/img/ccdb/marca_agua_suave.png" alt="">
             </div>
             <div class="print-report-head">
                 <h2>Reporte de Sanciones <?= $filtroS === 'cumplidas' ? 'Cumplidas' : 'Activas' ?></h2>
