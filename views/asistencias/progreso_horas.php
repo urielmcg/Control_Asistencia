@@ -10,11 +10,24 @@ $pageTitle = 'Progreso de Horas';
 $activeMenu = 'progreso_horas';
 $db = Database::getConnection();
 
-// Consulta a la vista vista_horas_proceso (interns only see their own row)
+// Consulta a la vista vista_horas_proceso (propios ven solo sus procesos)
 if (Auth::isPasante()) {
-    $stmt = $db->prepare("SELECT * FROM vista_horas_proceso WHERE ci = :ci ORDER BY horas_acumuladas DESC");
-    $stmt->execute([':ci' => trim(Auth::user()['ci'] ?? '')]);
-    $procesosHoras = $stmt->fetchAll();
+    require_once __DIR__ . '/../../includes/proceso_propio.php';
+    $ppHoras = procesosPropios($db) ?? [];
+    if (empty($ppHoras)) {
+        $procesosHoras = [];
+    } else {
+        $ph = [];
+        $paramsH = [];
+        foreach ($ppHoras as $i => $idp) {
+            $k = ':pph' . $i;
+            $ph[] = $k;
+            $paramsH[$k] = $idp;
+        }
+        $stmt = $db->prepare("SELECT * FROM vista_horas_proceso WHERE id_proceso IN (" . implode(',', $ph) . ") ORDER BY horas_acumuladas DESC");
+        $stmt->execute($paramsH);
+        $procesosHoras = $stmt->fetchAll();
+    }
     $esPropio = true;
 } else {
     $sql = "SELECT * FROM vista_horas_proceso ORDER BY horas_acumuladas DESC";
@@ -69,16 +82,21 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                             </tr>
                         <?php else: ?>
                             <?php foreach ($procesosHoras as $p): ?>
-                                <?php 
+                                <?php
                                     $porcentaje = (float)$p['porcentaje_completado'];
                                     $horasAcum = (float)$p['horas_acumuladas'];
                                     $horasReq = (int)$p['horas_requeridas'];
                                     $horasFalt = (float)$p['horas_faltantes'];
+                                    $nomP = trim(($p['nombres'] ?? '') . ' ' . ($p['apellidos'] ?? ''));
+                                    if ($nomP === '' && !empty($p['sol_postulante'])) {
+                                        $nomP = $p['sol_postulante'];
+                                    }
+                                    $ciP = $p['ci'] ?? $p['sol_ci'] ?? '-';
                                 ?>
                                 <tr>
-                                    <td><strong><?= htmlspecialchars($p['ci']) ?></strong></td>
+                                    <td><strong><?= htmlspecialchars($ciP) ?></strong></td>
                                     <td>
-                                        <div style="font-weight: 700; color: var(--primary-blue);"><?= htmlspecialchars($p['nombres'] . ' ' . $p['apellidos']) ?></div>
+                                        <div style="font-weight: 700; color: var(--primary-blue);"><?= htmlspecialchars($nomP) ?></div>
                                     </td>
                                     <td>
                                         <div><?= htmlspecialchars($p['carrera']) ?></div>
@@ -122,20 +140,30 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
         <?php
         // Proyecto de Grado: presence in days (Mon-Sat), not hours
-        $pgSql = "SELECT pr.id_proceso, p.nombres, p.apellidos, p.ci, pr.fecha_inicio, pr.fecha_fin,
+        $pgSql = "SELECT pr.id_proceso, p.nombres, p.apellidos, p.ci, s.postulante AS sol_postulante, s.ci AS sol_ci, pr.fecha_inicio, pr.fecha_fin,
                          COUNT(DISTINCT CASE WHEN DAYOFWEEK(a.fecha) <> 1 AND a.hora_entrada IS NOT NULL THEN a.fecha END) AS dias_asistidos,
                          ROUND(COALESCE(SUM(CASE WHEN a.hora_entrada IS NOT NULL AND a.hora_salida IS NOT NULL THEN TIME_TO_SEC(TIMEDIFF(a.hora_salida, a.hora_entrada)) / 3600.0 ELSE 0 END), 0), 2) AS horas_reg
                   FROM procesos pr
-                  INNER JOIN pasantes p ON pr.id_pasante = p.id_pasante
+                  LEFT JOIN pasantes p ON pr.id_pasante = p.id_pasante
+                  LEFT JOIN solicitudes_modalidad s ON s.id_proceso = pr.id_proceso
                   INNER JOIN modalidades m ON pr.id_modalidad = m.id_modalidad
                   LEFT JOIN asistencias a ON a.id_proceso = pr.id_proceso
                   WHERE pr.estado = 'EN_CURSO' AND m.nombre = 'Proyecto de Grado'";
         $pgParams = [];
         if ($esPropio) {
-            $pgSql .= " AND p.ci = :ci";
-            $pgParams[':ci'] = trim(Auth::user()['ci'] ?? '');
+            if (empty($ppHoras)) {
+                $pgSql .= " AND 1 = 0 ";
+            } else {
+                $php = [];
+                foreach ($ppHoras as $i => $idp) {
+                    $k = ':ppg' . $i;
+                    $php[] = $k;
+                    $pgParams[$k] = $idp;
+                }
+                $pgSql .= " AND pr.id_proceso IN (" . implode(',', $php) . ") ";
+            }
         }
-        $pgSql .= " GROUP BY pr.id_proceso ORDER BY p.apellidos";
+        $pgSql .= " GROUP BY pr.id_proceso ORDER BY COALESCE(p.apellidos, s.postulante)";
         $stmtPg = $db->prepare($pgSql);
         $stmtPg->execute($pgParams);
         $pgRows = $stmtPg->fetchAll();
@@ -156,6 +184,11 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                 <?php else: ?>
                     <?php foreach ($pgRows as $g):
                         $metaMeses = 6;
+                        $nomG = trim(($g['nombres'] ?? '') . ' ' . ($g['apellidos'] ?? ''));
+                        if ($nomG === '' && !empty($g['sol_postulante'])) {
+                            $nomG = $g['sol_postulante'];
+                        }
+                        $ciG = $g['ci'] ?? $g['sol_ci'] ?? '-';
                         if (!empty($g['fecha_inicio']) && !empty($g['fecha_fin'])) {
                             $dd1 = new DateTime($g['fecha_inicio']);
                             $dd2 = new DateTime($g['fecha_fin']);
@@ -168,8 +201,8 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                         $faltan = max(0, $metaDias - (int)$g['dias_asistidos']);
                     ?>
                         <div style="border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; background: #f8fafc;">
-                            <div style="font-weight: 800; color: var(--primary-blue);"><?= htmlspecialchars($g['nombres'] . ' ' . $g['apellidos']) ?></div>
-                            <div style="font-size: 0.8rem; color: var(--text-muted);">CI: <?= htmlspecialchars($g['ci']) ?></div>
+                            <div style="font-weight: 800; color: var(--primary-blue);"><?= htmlspecialchars($nomG) ?></div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">CI: <?= htmlspecialchars($ciG) ?></div>
                             <div style="margin-top: 10px; font-size: 0.9rem;">
                                 Asistidos <strong><?= (int)$g['dias_asistidos'] ?></strong> de <?= $metaDias ?> días
                                 &bull; <?= htmlspecialchars($g['horas_reg']) ?> hrs registradas
