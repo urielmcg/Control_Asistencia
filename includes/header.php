@@ -20,8 +20,8 @@ $activeMenu = $activeMenu ?? 'dashboard';
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Estilos del Sistema -->
-    <link rel="stylesheet" href="<?= APP_ROOT ?>assets/css/style.css">
+    <!-- Estilos del Sistema (versionado por mtime: siempre fresco, sin caché vieja) -->
+    <link rel="stylesheet" href="<?= APP_ROOT ?>assets/css/style.css?v=<?= (int)@filemtime(__DIR__ . '/../assets/css/style.css') ?>">
     <link rel="icon" type="image/png" href="<?= APP_ROOT ?>assets/img/ccdb/icono_ccdb.png">
 </head>
 <body>
