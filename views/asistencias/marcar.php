@@ -9,6 +9,7 @@
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../includes/marcado.php';
 require_once __DIR__ . '/../../includes/sanciones_reglas.php';
+require_once __DIR__ . '/../../includes/notificaciones.php';
 
 $db = Database::getConnection();
 $qrToken = trim($_GET['qr'] ?? '');
@@ -132,6 +133,7 @@ if ($qrProblem === '' && ($_SERVER['REQUEST_METHOD'] === 'POST' || $directMark))
                         ':suf' => ' | Auto-marcado móvil SALIDA' . ($vSalida['fuera_horario'] ? ' | FUERA DE HORARIO' : ''),
                         ':id' => $asis['id_asistencia'],
                     ]);
+                    notificarCompletado($db, (int)$proceso['id_proceso']);
                     header('Location: marcar.php?qr=' . urlencode($qrToken) . '&marcado=salida');
                     exit;
                 } else {

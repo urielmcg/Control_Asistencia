@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../config/auth.php';
 Auth::requireStaff();
 require_once __DIR__ . '/../../includes/marcado.php';
 require_once __DIR__ . '/../../includes/sanciones_reglas.php';
+require_once __DIR__ . '/../../includes/notificaciones.php';
 
 $pageTitle = 'Registro de Asistencia QR';
 $activeMenu = 'asistencias_qr';
@@ -250,6 +251,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ':suf'           => ' | Marcado QR Salida' . ($vSalida['fuera_horario'] ? ' | FUERA DE HORARIO' : ''),
                             ':id_asistencia' => $asistenciaHoy['id_asistencia']
                         ]);
+                        notificarCompletado($db, (int)$proceso['id_proceso']);
 
                         // Calcular horas cumplidas hoy
                         $diffSegundos = strtotime($horaSalida) - strtotime($asistenciaHoy['hora_entrada']);

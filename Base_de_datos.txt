@@ -482,7 +482,9 @@ CREATE TABLE certificaciones (
 CREATE TABLE notificaciones (
     id_notificacion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
-    id_pasante INT UNSIGNED NOT NULL,
+    id_pasante INT UNSIGNED NULL,
+
+    id_proceso INT UNSIGNED NULL,
 
     titulo VARCHAR(150) NOT NULL,
     mensaje TEXT NOT NULL,
@@ -496,6 +498,12 @@ CREATE TABLE notificaciones (
     CONSTRAINT fk_notificaciones_pasante
         FOREIGN KEY (id_pasante)
         REFERENCES pasantes(id_pasante)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_notificaciones_proceso
+        FOREIGN KEY (id_proceso)
+        REFERENCES procesos(id_proceso)
         ON UPDATE CASCADE
         ON DELETE CASCADE
 ) ENGINE=InnoDB;

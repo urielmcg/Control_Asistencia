@@ -308,7 +308,8 @@ CREATE TABLE IF NOT EXISTS certificaciones (
 -- 16. TABLA: NOTIFICACIONES
 CREATE TABLE IF NOT EXISTS notificaciones (
     id_notificacion INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    id_pasante INT UNSIGNED NOT NULL,
+    id_pasante INT UNSIGNED NULL,
+    id_proceso INT UNSIGNED NULL,
     titulo VARCHAR(150) NOT NULL,
     mensaje TEXT NOT NULL,
     tipo VARCHAR(50) NOT NULL,
@@ -317,6 +318,11 @@ CREATE TABLE IF NOT EXISTS notificaciones (
     CONSTRAINT fk_notificaciones_pasante
         FOREIGN KEY (id_pasante)
         REFERENCES pasantes(id_pasante)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT fk_notificaciones_proceso
+        FOREIGN KEY (id_proceso)
+        REFERENCES procesos(id_proceso)
         ON UPDATE CASCADE
         ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -424,6 +430,7 @@ CREATE INDEX idx_procesos_estado ON procesos(estado);
 CREATE INDEX idx_asistencias_fecha ON asistencias(fecha);
 CREATE INDEX idx_asistencias_proceso_fecha ON asistencias(id_proceso, fecha);
 CREATE INDEX idx_procesodias_proceso ON proceso_dias(id_proceso);
+CREATE INDEX idx_notificaciones_proceso ON notificaciones(id_proceso);
 CREATE INDEX idx_sanciones_fecha ON sanciones(fecha);
 CREATE INDEX idx_auditoria_fecha ON auditoria(fecha);
 
