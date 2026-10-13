@@ -74,6 +74,7 @@ if (!$pasante && $id_proceso_qr > 0) {
                 'carrera' => $proc['carrera'] ?? null,
                 'institucion' => $proc['universidad'] ?? null,
                 'correo' => null, 'telefono' => null, 'semestre' => null, 'foto' => null,
+                'estado' => ($proc['estado'] ?? '') === 'EN_CURSO' ? 'ACTIVO' : 'INACTIVO',
             ];
             $procesoActivo = $proc;
             $esProceso = true;
@@ -187,9 +188,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                     <span><?= htmlspecialchars($iniciales) ?></span>
                                 </div>
                             <?php endif; ?>
-                            <div class="carnet-badge-status <?= $pasante['estado'] === 'ACTIVO' ? 'status-activo' : 'status-inactivo' ?>">
+                            <div class="carnet-badge-status <?= ($pasante['estado'] ?? '') === 'ACTIVO' ? 'status-activo' : 'status-inactivo' ?>">
                                 <i class="fa-solid fa-check"></i>
-                                <?= htmlspecialchars($pasante['estado']) ?>
+                                <?= htmlspecialchars($pasante['estado'] ?? '—') ?>
                             </div>
                         </div>
 
