@@ -69,6 +69,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $compromiso = trim($_POST['compromiso'] ?? '');
     $idea = trim($_POST['idea_tema'] ?? '');
     $descripcion = trim($_POST['descripcion'] ?? '');
+    $diasPost = (is_array($_POST['dias'] ?? null)) ? $_POST['dias'] : [];
+    $diasSemana = [1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles', 4 => 'Jueves', 5 => 'Viernes', 6 => 'Sábado'];
+    $horario = [];
+    foreach ($diasSemana as $num => $nombreDia) {
+        $id_t = (int)($diasPost[$num] ?? 0);
+        if ($id_t > 0) { $horario[$num] = $id_t; }
+    }
 
     $stmtMod = $db->prepare("SELECT nombre FROM modalidades WHERE id_modalidad = :id AND estado = 1");
     $stmtMod->execute([':id' => $id_modalidad]);
@@ -87,6 +94,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $db->beginTransaction();
+            // Grilla con días: el turno referencial sale del primer día; grilla vacía = fallback al turno manual
+            if (!empty($horario)) {
+                $id_turno = (int)reset($horario);
+                $turnosValidos = array_map('intval', $db->query("SELECT id_turno FROM turnos WHERE estado = 1")->fetchAll(PDO::FETCH_COLUMN));
+                foreach ($horario as $numDia => $idTurnoDia) {
+                    if (!in_array($idTurnoDia, $turnosValidos, true)) {
+                        throw new Exception('Turno inválido en el horario semanal.');
+                    }
+                }
+            }
             if ($id_pasante_vinc > 0) {
                 $stmtVinc = $db->prepare("SELECT id_pasante FROM pasantes WHERE id_pasante = :id LIMIT 1");
                 $stmtVinc->execute([':id' => $id_pasante_vinc]);
@@ -111,6 +128,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':obs'    => $descripcion !== '' ? $descripcion : null,
                 ':id'     => $id_proceso,
             ]);
+            // Sincroniza el horario semanal (reemplazo completo)
+            $db->prepare("DELETE FROM proceso_dias WHERE id_proceso = :id")->execute([':id' => $id_proceso]);
+            if (!empty($horario)) {
+                $stmtDia = $db->prepare("INSERT INTO proceso_dias (id_proceso, dia_semana, id_turno) VALUES (:proc, :dia, :turno)");
+                foreach ($horario as $numDia => $idTurnoDia) {
+                    $stmtDia->execute([':proc' => $id_proceso, ':dia' => $numDia, ':turno' => $idTurnoDia]);
+                }
+            }
             if (!empty($sol['id_solicitud'])) {
                 $stmtS = $db->prepare("UPDATE solicitudes_modalidad SET postulante = :post, universidad = :uni, carrera = :car,
                                        meses_proyectados = :meses, motivacion = :mot, compromiso = :comp,
@@ -160,6 +185,12 @@ $modalidades = $db->query("SELECT * FROM modalidades WHERE estado = 1 ORDER BY n
 $turnos = $db->query("SELECT * FROM turnos WHERE estado = 1 ORDER BY hora_inicio ASC")->fetchAll();
 $tutores = $db->query("SELECT id_tutor, nombre FROM tutores WHERE estado = 'ACTIVO' ORDER BY nombre ASC")->fetchAll();
 $listaPasantes = $db->query("SELECT id_pasante, nombres, apellidos, ci FROM pasantes WHERE estado = 'ACTIVO' ORDER BY apellidos ASC")->fetchAll();
+$stmtDias = $db->prepare("SELECT dia_semana, id_turno FROM proceso_dias WHERE id_proceso = :id");
+$stmtDias->execute([':id' => $id_proceso]);
+$diasActuales = [];
+foreach ($stmtDias->fetchAll() as $rd) {
+    $diasActuales[(int)$rd['dia_semana']] = (int)$rd['id_turno'];
+}
 
 require_once __DIR__ . '/../../includes/header.php';
 require_once __DIR__ . '/../../includes/sidebar.php';
@@ -184,6 +215,9 @@ require_once __DIR__ . '/../../includes/sidebar.php';
 
             <?php if (!empty($error)): ?>
                 <div class="alert alert-danger"><span><?= htmlspecialchars($error) ?></span></div>
+            <?php endif; ?>
+            <?php if (isset($_GET['vincular']) && empty($sol['id_pasante'])): ?>
+                <div class="alert alert-info"><span>Elegí el pasante en "Pasante vinculado" y guardá para habilitar Credencial QR e Historial.</span></div>
             <?php endif; ?>
 
             <form action="editar_solicitud.php?id=<?= $id_proceso ?>" method="POST">
@@ -263,6 +297,26 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                 <option value="<?= $e ?>" <?= ($sol['estado'] === $e) ? 'selected' : '' ?>><?= $e ?></option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+                </div>
+
+                <div style="margin-top: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
+                    <label style="font-weight: 700; font-size: 0.85rem; color: #0f172a;">Horario semanal</label>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 4px 0 12px 0;">Turno por día según los horarios administrables. Todo en "No viene" = rige el turno de arriba.</p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">
+                        <?php foreach ([1 => 'Lunes', 2 => 'Martes', 3 => 'Miércoles', 4 => 'Jueves', 5 => 'Viernes', 6 => 'Sábado'] as $numDia => $nombreDia): ?>
+                        <div class="form-group" style="margin: 0;">
+                            <label for="dia_<?= $numDia ?>"><?= $nombreDia ?></label>
+                            <select name="dias[<?= $numDia ?>]" id="dia_<?= $numDia ?>" class="form-control">
+                                <option value="0">No viene</option>
+                                <?php foreach ($turnos as $t): ?>
+                                    <option value="<?= $t['id_turno'] ?>" <?= ((int)($diasActuales[$numDia] ?? 0) === (int)$t['id_turno']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($t['nombre']) ?> · <?= htmlspecialchars(substr($t['hora_inicio'], 0, 5)) ?>–<?= htmlspecialchars(substr($t['hora_fin'], 0, 5)) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
 

@@ -201,22 +201,19 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                                                 <a href="../pasantes/credencial_qr.php?id=<?= $sol['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Ver Credencial QR" style="color: var(--primary-blue); border-color: var(--primary-blue);">
                                                     <i class="fa-solid fa-qrcode"></i>
                                                 </a>
-                                            <?php else: ?>
-                                                <span class="btn btn-outline btn-sm" title="Sin postulante vinculado" style="opacity: 0.4; cursor: not-allowed;">
-                                                    <i class="fa-solid fa-qrcode"></i>
-                                                </span>
-                                            <?php endif; ?>
-                                            <a href="editar_solicitud.php?id=<?= $sol['id_proceso'] ?>" class="btn btn-outline btn-sm" title="Editar">
-                                                <i class="fa-solid fa-pen-to-square"></i>
-                                            </a>
-                                            <?php if (!empty($sol['id_pasante'])): ?>
+                                                <a href="editar_solicitud.php?id=<?= $sol['id_proceso'] ?>" class="btn btn-outline btn-sm" title="Editar">
+                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                                </a>
                                                 <a href="../asistencias/historial.php?id_pasante=<?= $sol['id_pasante'] ?>" class="btn btn-outline btn-sm" title="Ver Asistencias">
                                                     <i class="fa-solid fa-calendar-days"></i>
                                                 </a>
                                             <?php else: ?>
-                                                <span class="btn btn-outline btn-sm" title="Sin postulante vinculado" style="opacity: 0.4; cursor: not-allowed;">
-                                                    <i class="fa-solid fa-calendar-days"></i>
-                                                </span>
+                                                <a href="editar_solicitud.php?id=<?= $sol['id_proceso'] ?>&vincular=1" class="btn btn-outline btn-sm" title="Vincular pasante para habilitar QR e Historial">
+                                                    <i class="fa-solid fa-user-plus"></i>
+                                                </a>
+                                                <a href="editar_solicitud.php?id=<?= $sol['id_proceso'] ?>" class="btn btn-outline btn-sm" title="Editar">
+                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                                </a>
                                             <?php endif; ?>
                                         </div>
                                     </td>
