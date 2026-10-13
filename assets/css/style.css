@@ -746,6 +746,17 @@ body {
     color: #475569 !important;
   }
 
+  /* Cierre garantizado del marco en impresión (todos los reportes) */
+  .print-table {
+    outline: 1px solid #0d3b66 !important;
+    outline-offset: -1px !important;
+  }
+
+  .print-table tr {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
   .print-foot {
     display: none !important;
   }
