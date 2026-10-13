@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($id_modalidad <= 0 || !$modNombre) {
         $error = 'Seleccione la modalidad (Proyecto de Grado o Trabajo Dirigido).';
-    } elseif ($postulante === '' || $universidad === '' || $carrera === '' || $id_turno <= 0
+    } elseif ($postulante === '' || $universidad === '' || $carrera === ''
         || $meses <= 0 || $motivacion === '' || $compromiso === '') {
         $error = 'Por favor complete todos los campos obligatorios (*).';
     } elseif (empty($horario)) {
@@ -57,6 +57,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $db->beginTransaction();
 
+            // Sin campo de turno único: el turno referencial sale del primer día del horario
+            if ($id_turno <= 0) {
+                $id_turno = (int)reset($horario);
+            }
             $stmtTurno = $db->prepare("SELECT id_turno FROM turnos WHERE id_turno = :id AND estado = 1");
             $stmtTurno->execute([':id' => $id_turno]);
             if (!$stmtTurno->fetch()) {
@@ -200,17 +204,6 @@ require_once __DIR__ . '/../../includes/sidebar.php';
                     <div class="form-group">
                         <label for="carrera">Carrera *</label>
                         <input type="text" name="carrera" id="carrera" class="form-control" required value="<?= htmlspecialchars($_POST['carrera'] ?? '') ?>">
-                    </div>
-                    <div class="form-group">
-                        <label for="id_turno">Turno de acompañamiento *</label>
-                        <select name="id_turno" id="id_turno" class="form-control" required>
-                            <option value="0">Seleccionar turno</option>
-                            <?php foreach ($turnos as $t): ?>
-                                <option value="<?= $t['id_turno'] ?>">
-                                    <?= htmlspecialchars($t['nombre']) ?> · <?= htmlspecialchars(substr($t['hora_inicio'], 0, 5)) ?>–<?= htmlspecialchars(substr($t['hora_fin'], 0, 5)) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
                     </div>
                     <div class="form-group">
                         <label for="meses">Tiempo de presencia proyectado (meses) *</label>
